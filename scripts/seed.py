@@ -7,8 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.infra.db import (
     make_engine, make_session_factory, init_db,
-    CohortRow, StudentRow, StudentSkillRow, EnrollmentRow, StudentConstraintRow,
-    Base
+    CohortRow, StudentRow, StudentSkillRow, EnrollmentRow, StudentConstraintRow
 )
 
 def seed():

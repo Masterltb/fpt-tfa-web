@@ -1,0 +1,169 @@
+"""Academic Catalogs & Sections API Router (Agent Role: Senior Backend).
+
+Implements Campuses, Terms, Majors, Courses, Skills, Class Sections, and Roster Import endpoints.
+RFC 7807 compliance & RBAC enforced (docs/rbac.md & docs/api-contract.md).
+"""
+from __future__ import annotations
+
+import uuid
+from typing import Any
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from pydantic import BaseModel
+
+from app.api.deps import Principal, require_admin, require_student
+from app.services.csv_importer import parse_csv_roster
+
+router = APIRouter(prefix="/api/v1", tags=["Academic Catalogs & Sections"])
+
+
+# ---------------------------------------------------------------------------
+# Schemas
+# ---------------------------------------------------------------------------
+
+class MajorPayload(BaseModel):
+    code: str
+    name: str
+    program_id: str = ""
+
+
+class SkillCatalogPayload(BaseModel):
+    name: str
+    category: str = "technical"
+
+
+_campuses_db = [
+    {"id": "camp-hcm", "code": "HCM", "name": "FPT Campus TP.HCM", "is_active": True},
+    {"id": "camp-hn", "code": "HN", "name": "FPT Campus Ha Noi", "is_active": True},
+    {"id": "camp-dn", "code": "DN", "name": "FPT Campus Da Nang", "is_active": True},
+]
+
+_terms_db = [
+    {"id": "term-fall26", "campus_id": "camp-hcm", "name": "Fall 2026", "status": "ACTIVE"}
+]
+
+_majors_db = [
+    {"id": "maj-se", "code": "SE", "name": "Software Engineering"},
+    {"id": "maj-ia", "code": "IA", "name": "Information Assurance"},
+    {"id": "maj-ai", "code": "AI", "name": "Artificial Intelligence"},
+]
+
+_courses_db = [
+    {"id": "crs-prn232", "code": "PRN232", "name": "C# & .NET Enterprise Applications"},
+    {"id": "crs-exe101", "code": "EXE101", "name": "Experiential Entrepreneurship"},
+]
+
+_skills_db = [
+    {"id": "skl-1", "name": "Python", "category": "backend"},
+    {"id": "skl-2", "name": "React", "category": "frontend"},
+    {"id": "skl-3", "name": "PostgreSQL", "category": "database"},
+    {"id": "skl-4", "name": "Figma", "category": "design"},
+]
+
+_sections_db = [
+    {
+        "id": "sec-se1701",
+        "term_id": "term-fall26",
+        "course_id": "crs-prn232",
+        "lecturer_id": "lec-001",
+        "code": "SE1701",
+        "capacity": 40,
+        "status": "ACTIVE",
+        "students_count": 35
+    }
+]
+
+
+# ---------------------------------------------------------------------------
+# Catalog Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/campuses")
+async def list_campuses() -> dict[str, Any]:
+    return {"data": _campuses_db}
+
+
+@router.post("/campuses", status_code=status.HTTP_201_CREATED)
+async def create_campus(payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    cid = f"camp-{uuid.uuid4().hex[:6]}"
+    item = {"id": cid, **payload}
+    _campuses_db.append(item)
+    return {"data": item}
+
+
+@router.get("/terms")
+async def list_terms() -> dict[str, Any]:
+    return {"data": _terms_db}
+
+
+@router.post("/terms/{term_id}/activate")
+async def activate_term(term_id: str, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    term = next((t for t in _terms_db if t["id"] == term_id), None)
+    if not term:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Term not found")
+    term["status"] = "ACTIVE"
+    return {"data": term}
+
+
+@router.get("/majors")
+async def list_majors() -> dict[str, Any]:
+    return {"data": _majors_db}
+
+
+@router.post("/majors", status_code=status.HTTP_201_CREATED)
+async def create_major(payload: MajorPayload, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    mid = f"maj-{uuid.uuid4().hex[:6]}"
+    item = {"id": mid, **payload.model_dump()}
+    _majors_db.append(item)
+    return {"data": item}
+
+
+@router.get("/courses")
+async def list_courses() -> dict[str, Any]:
+    return {"data": _courses_db}
+
+
+@router.get("/skills")
+async def list_skills() -> dict[str, Any]:
+    return {"data": _skills_db}
+
+
+@router.post("/skills", status_code=status.HTTP_201_CREATED)
+async def create_skill(payload: SkillCatalogPayload, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    skid = f"skl-{uuid.uuid4().hex[:6]}"
+    item = {"id": skid, **payload.model_dump()}
+    _skills_db.append(item)
+    return {"data": item}
+
+
+# ---------------------------------------------------------------------------
+# Section Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/sections")
+async def list_sections() -> dict[str, Any]:
+    return {"data": _sections_db}
+
+
+@router.get("/sections/{section_id}/students")
+async def get_section_students(
+    section_id: str,
+    principal: Principal = Depends(require_student)
+) -> dict[str, Any]:
+    students = [
+        {"id": "stu-001", "student_code": "SE170001", "name": "Nguyen Van A", "email": "anv@fpt.edu.vn", "major": "SE"},
+        {"id": "stu-002", "student_code": "SE170002", "name": "Tran Thi B", "email": "btt@fpt.edu.vn", "major": "SE"},
+        {"id": "stu-003", "student_code": "SE170003", "name": "Le Van C", "email": "clv@fpt.edu.vn", "major": "IA"},
+        {"id": "stu-004", "student_code": "SE170004", "name": "Pham Van D", "email": "dpv@fpt.edu.vn", "major": "AI"},
+    ]
+    return {"data": students, "meta": {"total": len(students)}}
+
+
+@router.post("/sections/{section_id}/students/import")
+async def import_section_students(
+    section_id: str,
+    file: UploadFile = File(...),
+    _admin: Principal = Depends(require_admin)
+) -> dict[str, Any]:
+    content = await file.read()
+    summary = parse_csv_roster(content)
+    return {"data": summary.model_dump()}

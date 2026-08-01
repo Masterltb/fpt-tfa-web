@@ -6,10 +6,8 @@ and peer preferences according to the weight configurations (feat 009).
 from __future__ import annotations
 
 import unittest
-import random
 
 from app.domain.models import Constraints, Project, Student
-from app.domain.rules import violations
 
 try:
     from app.matching.ortools_engine import OrToolsMatchingEngine

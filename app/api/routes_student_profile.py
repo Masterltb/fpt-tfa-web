@@ -1,0 +1,206 @@
+"""Student Dashboard & Team DNA API Router (Agent Role: Senior Backend & BA).
+
+Implements Student Dashboard, Team DNA profile wizard, Availability Grid, Experiences, and Readiness score.
+RFC 7807 compliance & RBAC enforced (docs/rbac.md & docs/api-contract.md).
+"""
+from __future__ import annotations
+
+import uuid
+from typing import Any
+from fastapi import APIRouter, Depends, status
+from pydantic import BaseModel, Field
+
+from app.api.deps import Principal, require_student
+from app.domain.models import CommitmentLevel
+
+router = APIRouter(prefix="/api/v1/students/me", tags=["Student DNA & Dashboard"])
+
+
+# ---------------------------------------------------------------------------
+# Schemas
+# ---------------------------------------------------------------------------
+
+class SkillEntryPayload(BaseModel):
+    name: str
+    proficiency: int = Field(ge=1, le=5)
+
+
+class AvailabilityPayload(BaseModel):
+    slots: list[str] = Field(default_factory=list, description="e.g. ['MON_AM', 'WED_PM']")
+
+
+class ExperiencePayload(BaseModel):
+    project_name: str
+    role: str = ""
+    description: str = ""
+    duration_months: int = 0
+
+
+class TeamDNAProfilePayload(BaseModel):
+    class_section_id: str = "sec-se1701"
+    skills: list[SkillEntryPayload] = Field(default_factory=list)
+    preferred_roles: list[str] = Field(default_factory=list)
+    experiences: list[ExperiencePayload] = Field(default_factory=list)
+    experience_years: float = 0.0
+    availability: list[str] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
+    commitment_level: CommitmentLevel = CommitmentLevel.MEDIUM
+    working_preferences: dict[str, str] = Field(default_factory=dict)
+    portfolio_url: str = ""
+    preferred_team_size: int = 4
+
+
+_student_dnas: dict[str, dict[str, Any]] = {}
+_student_availabilities: dict[str, list[str]] = {}
+_student_experiences: dict[str, list[dict[str, Any]]] = {}
+
+
+# ---------------------------------------------------------------------------
+# Student Dashboard & Readiness Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/dashboard")
+async def get_student_dashboard(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    dna = _student_dnas.get(principal.user_id, {})
+    completion = dna.get("completion_percentage", 65)
+
+    return {
+        "data": {
+            "student_id": principal.user_id,
+            "active_session": {
+                "id": "sess-fall26-01",
+                "name": "Capstar Team Formation - Fall 2026",
+                "course_code": "PRN232",
+                "section_code": "SE1701",
+                "mode": "HYBRID",
+                "status": "OPEN",
+                "deadline": "2026-09-15T23:59:59Z"
+            },
+            "my_team": None,
+            "profile_readiness": completion,
+            "pending_invitations_count": 1
+        }
+    }
+
+
+@router.get("/profile-readiness")
+async def get_profile_readiness(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    dna = _student_dnas.get(principal.user_id, {})
+    score = dna.get("completion_percentage", 65)
+    return {
+        "data": {
+            "readiness_score": score,
+            "is_complete": score >= 80,
+            "missing_sections": ["working_preferences"] if score < 80 else []
+        }
+    }
+
+
+# ---------------------------------------------------------------------------
+# Team DNA Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/team-profile")
+async def get_team_profile(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    dna = _student_dnas.get(principal.user_id)
+    if not dna:
+        dna = {
+            "id": f"dna-{principal.user_id}",
+            "student_id": principal.user_id,
+            "class_section_id": "sec-se1701",
+            "skills": [{"name": "Python", "proficiency": 4}, {"name": "React", "proficiency": 3}],
+            "preferred_roles": ["backend", "leader"],
+            "experience_years": 1.0,
+            "availability": ["MON_AM", "TUE_PM", "THU_PM"],
+            "interests": ["AI", "Web Development"],
+            "commitment_level": "HIGH",
+            "completion_percentage": 75
+        }
+    return {"data": dna}
+
+
+@router.put("/team-profile")
+async def update_team_profile(
+    payload: TeamDNAProfilePayload,
+    principal: Principal = Depends(require_student)
+) -> dict[str, Any]:
+    checks = [
+        bool(payload.skills),
+        bool(payload.preferred_roles),
+        bool(payload.experiences) or payload.experience_years > 0,
+        bool(payload.availability),
+        bool(payload.interests),
+        payload.commitment_level != CommitmentLevel.MEDIUM or bool(payload.working_preferences),
+        bool(payload.working_preferences),
+    ]
+    weights = [20, 15, 15, 15, 10, 10, 15]
+    completion = sum(w for c, w in zip(checks, weights) if c)
+
+    dna = {
+        "id": f"dna-{principal.user_id}",
+        "student_id": principal.user_id,
+        "completion_percentage": completion,
+        **payload.model_dump()
+    }
+    _student_dnas[principal.user_id] = dna
+    return {"data": dna}
+
+
+# ---------------------------------------------------------------------------
+# Availability Grid Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/availability")
+async def get_availability(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    slots = _student_availabilities.get(principal.user_id, ["MON_AM", "TUE_PM", "THU_PM"])
+    return {"data": {"slots": slots}}
+
+
+@router.put("/availability")
+async def update_availability(
+    payload: AvailabilityPayload,
+    principal: Principal = Depends(require_student)
+) -> dict[str, Any]:
+    _student_availabilities[principal.user_id] = payload.slots
+    return {"data": {"slots": payload.slots}}
+
+
+# ---------------------------------------------------------------------------
+# Experience Management Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/experiences")
+async def list_experiences(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    exps = _student_experiences.get(principal.user_id, [
+        {
+            "id": "exp-1",
+            "project_name": "E-Commerce Microservices",
+            "role": "Backend Lead",
+            "description": "Built catalog and checkout APIs in FastAPI.",
+            "duration_months": 4
+        }
+    ])
+    return {"data": exps}
+
+
+@router.post("/experiences", status_code=status.HTTP_201_CREATED)
+async def add_experience(
+    payload: ExperiencePayload,
+    principal: Principal = Depends(require_student)
+) -> dict[str, Any]:
+    exp_id = f"exp-{uuid.uuid4().hex[:6]}"
+    item = {"id": exp_id, **payload.model_dump()}
+    if principal.user_id not in _student_experiences:
+        _student_experiences[principal.user_id] = []
+    _student_experiences[principal.user_id].append(item)
+    return {"data": item}
+
+
+@router.delete("/experiences/{experience_id}")
+async def delete_experience(
+    experience_id: str,
+    principal: Principal = Depends(require_student)
+) -> dict[str, Any]:
+    exps = _student_experiences.get(principal.user_id, [])
+    _student_experiences[principal.user_id] = [e for e in exps if e["id"] != experience_id]
+    return {"data": {"message": "Experience deleted"}}

@@ -11,7 +11,7 @@ import json
 import base64
 from dataclasses import dataclass
 
-from fastapi import Depends, Header, HTTPException, status, Request  # type: ignore[import-not-found]
+from fastapi import Depends, HTTPException, status  # type: ignore[import-not-found]
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials # type: ignore[import-not-found]
 
 from ..matching.engine import MatchingEngine
@@ -121,8 +121,15 @@ async def current_principal(
 
 def require_role(*allowed: str):
     async def _dep(principal: Principal = Depends(current_principal)) -> Principal:
-        if principal.role not in allowed:
+        normalized_allowed = {r.lower() for r in allowed}
+        if principal.role.lower() not in normalized_allowed:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "insufficient role")
         return principal
 
     return _dep
+
+
+require_admin = require_role("admin", "ADMIN")
+require_lecturer = require_role("lecturer", "LECTURER", "admin", "ADMIN")
+require_student = require_role("student", "STUDENT", "lecturer", "LECTURER", "admin", "ADMIN")
+
