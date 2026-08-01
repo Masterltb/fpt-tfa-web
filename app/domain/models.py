@@ -16,61 +16,102 @@ from datetime import date, datetime
 from enum import Enum
 
 # ---------------------------------------------------------------------------
-# Enums
+# Enums (Aligned with API Spec v1.0.0)
 # ---------------------------------------------------------------------------
+
+class UserRole(str, Enum):
+    STUDENT = "STUDENT"
+    LECTURER = "LECTURER"
+    ADMIN = "ADMIN"
+
+
+class UserStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    SUSPENDED = "SUSPENDED"
+
 
 class GroupingMode(str, Enum):
     """Three modes of team formation."""
-    LECTURER_LED = "lecturer_led"
-    STUDENT_LED = "student_led"
-    HYBRID = "hybrid"
+    STUDENT_LED = "STUDENT_LED"
+    LECTURER_LED = "LECTURER_LED"
+    HYBRID = "HYBRID"
 
 
-class SessionStatus(str, Enum):
-    DRAFT = "draft"
-    OPEN = "open"           # accepting Team DNA + student teams
-    MATCHING = "matching"   # AI is running
-    REVIEW = "review"       # lecturer reviewing results
-    PUBLISHED = "published" # final, students notified
+class GroupingSessionStatus(str, Enum):
+    DRAFT = "DRAFT"
+    OPEN = "OPEN"           # accepting Team DNA + student teams
+    FROZEN = "FROZEN"       # input frozen for matching
+    MATCHING = "MATCHING"   # AI is running
+    REVIEW = "REVIEW"       # lecturer reviewing results
+    PUBLISHED = "PUBLISHED" # final, students notified
+    CLOSED = "CLOSED"
+    CANCELLED = "CANCELLED"
 
 
 class TermStatus(str, Enum):
-    UPCOMING = "upcoming"
-    ACTIVE = "active"
-    COMPLETED = "completed"
+    PLANNED = "PLANNED"
+    ACTIVE = "ACTIVE"
+    CLOSED = "CLOSED"
+    ARCHIVED = "ARCHIVED"
+
+
+class SectionStatus(str, Enum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
 
 
 class CommitmentLevel(str, Enum):
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
 
 
 class TeamStatus(str, Enum):
-    DRAFT = "draft"           # student-created, not submitted
-    SUBMITTED = "submitted"   # submitted for approval
-    AI_SUGGESTED = "ai_suggested"
-    APPROVED = "approved"
-    PUBLISHED = "published"
+    FORMING = "FORMING"       # student-created, draft
+    SUBMITTED = "SUBMITTED"   # submitted for approval
+    APPROVED = "APPROVED"    # approved by lecturer
+    PUBLISHED = "PUBLISHED"   # official published team
+    REJECTED = "REJECTED"
+    DISSOLVED = "DISSOLVED"
+    AI_SUGGESTED = "AI_SUGGESTED"  # legacy compatibility alias
 
 
 class InvitationStatus(str, Enum):
-    PENDING = "pending"
-    ACCEPTED = "accepted"
-    DECLINED = "declined"
-    EXPIRED = "expired"
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    DECLINED = "DECLINED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+
+
+class JoinRequestStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"
+
+
+class MatchRunStatus(str, Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class ConstraintStatus(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 
 
-# Desired role is domain-neutral and configured per course/project — NOT software-specific.
-# This is only a generic default vocabulary (assumption A-04, needs confirmation); a course can
-# supply its own (e.g. lab roles for a science capstone, business roles for a marketing project).
-# The field itself is a free-form string; this tuple is just a suggestion list.
+# Alias for SessionStatus for backward compatibility
+SessionStatus = GroupingSessionStatus
+
+
+# Desired role vocabulary suggestions
 DEFAULT_ROLES = ("leader", "coordinator", "researcher", "presenter", "member", "other")
 
 
@@ -105,7 +146,7 @@ class Term:
     name: str           # "Fall 2026"
     start_date: date | None = None
     end_date: date | None = None
-    status: TermStatus = TermStatus.UPCOMING
+    status: TermStatus = TermStatus.PLANNED
 
 
 @dataclass
@@ -131,8 +172,10 @@ class ClassSection:
     lecturer_id: str        # the lecturer (user id) who owns this class
     code: str               # "SE18xx"
     name: str = ""          # optional display name
+    capacity: int = 40
+    status: SectionStatus = SectionStatus.ACTIVE
+    campus_id: str = ""
     max_students: int = 40
-    is_active: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +185,7 @@ class ClassSection:
 @dataclass(frozen=True)
 class Skill:
     name: str
-    proficiency: int  # 1..5 (A-04)
+    proficiency: int  # 1..5 (1 Beginner, 2 Basic, 3 Intermediate, 4 Advanced, 5 Expert)
 
     def __post_init__(self) -> None:
         if not 1 <= self.proficiency <= 5:
@@ -170,7 +213,6 @@ class Student:
     is_active: bool = True
 
     # Legacy fields for backward compatibility with existing matching engine.
-    # These are defaults; real data comes from TeamDNA per class section.
     skills: list[Skill] = field(default_factory=list)
     experience_years: float = 0.0
     availability: frozenset[str] = frozenset()
@@ -179,62 +221,36 @@ class Student:
     major: str = ""  # legacy — use major_id for new code
 
     def competency(self) -> float:
-        """Deterministic competency signal (A-04): mean skill proficiency + capped experience.
-
-        Uses only skills and experience — never a protected attribute.
-        """
         base = (sum(s.proficiency for s in self.skills) / len(self.skills)) if self.skills else 0.0
-        experience_bonus = min(self.experience_years, 3.0) * 0.5  # capped
+        experience_bonus = min(self.experience_years, 3.0) * 0.5
         return round(base + experience_bonus, 6)
 
 
 @dataclass
 class TeamDNA:
-    """A student's team formation profile for a specific class section.
-
-    This is the branded concept — 'Team DNA' — that captures everything needed
-    to match a student into a balanced team. One per student per class section.
-    """
+    """A student's team formation profile for a specific class section."""
     id: str
     student_id: str
     class_section_id: str
 
-    # Skills & proficiency
     skills: list[Skill] = field(default_factory=list)
-
-    # Preferred roles (free-form, ordered by preference)
     preferred_roles: list[str] = field(default_factory=list)
-
-    # Project experience
     experiences: list[ProjectExperience] = field(default_factory=list)
     experience_years: float = 0.0
-
-    # Schedule availability (weekly slot ids, e.g. ["mon-evening", "wed-afternoon"])
     availability: list[str] = field(default_factory=list)
-
-    # Interests & project topics
     interests: list[str] = field(default_factory=list)
-
-    # Commitment level
     commitment_level: CommitmentLevel = CommitmentLevel.MEDIUM
-
-    # Working preferences
     working_preferences: dict[str, str] = field(default_factory=dict)
-    # e.g. {"communication": "online", "meeting_frequency": "weekly",
-    #        "work_style": "structured", "conflict_resolution": "discuss"}
 
-    # Completion tracking
     completion_percentage: int = 0
     updated_at: datetime | None = None
 
     def competency(self) -> float:
-        """Deterministic competency from Team DNA skills + experience."""
         base = (sum(s.proficiency for s in self.skills) / len(self.skills)) if self.skills else 0.0
         experience_bonus = min(self.experience_years, 3.0) * 0.5
         return round(base + experience_bonus, 6)
 
     def compute_completion(self) -> int:
-        """Calculate Team DNA completion percentage (0-100)."""
         checks = [
             bool(self.skills),                  # 20%
             bool(self.preferred_roles),         # 15%
@@ -252,38 +268,30 @@ class TeamDNA:
 
 @dataclass
 class GroupingSession:
-    """One round of team formation within a class section.
-
-    A lecturer creates a grouping session, configures requirements, and manages
-    the entire lifecycle from opening → matching → review → publish.
-    """
+    """One round of team formation within a class section."""
     id: str
     class_section_id: str
     name: str                   # "Capstone Project Teams", "Lab Group Assignment"
 
-    # Configuration
     mode: GroupingMode = GroupingMode.HYBRID
-    team_min_size: int = 3
+    team_min_size: int = 4
     team_max_size: int = 5
     required_roles: list[str] = field(default_factory=list)
     required_skills: list[str] = field(default_factory=list)
-    required_majors: list[str] = field(default_factory=list)  # major diversity requirement
+    required_majors: list[str] = field(default_factory=list)
 
-    # Soft constraint weights (0.0 to 1.0)
     weights: dict[str, float] = field(default_factory=lambda: {
-        "skill_coverage": 0.25,
-        "experience_balance": 0.15,
-        "role_match": 0.15,
-        "schedule_overlap": 0.15,
-        "commitment_compat": 0.10,
-        "interest_similarity": 0.10,
-        "major_diversity": 0.05,
-        "working_pref_compat": 0.05,
+        "skillCoverage": 30.0,
+        "roleFit": 20.0,
+        "availability": 20.0,
+        "experienceBalance": 10.0,
+        "interestSimilarity": 10.0,
+        "majorDiversity": 5.0,
+        "workStyleCompatibility": 5.0,
     })
 
-    # Lifecycle
     deadline: datetime | None = None
-    status: SessionStatus = SessionStatus.DRAFT
+    status: GroupingSessionStatus = GroupingSessionStatus.DRAFT
     created_at: datetime | None = None
     published_at: datetime | None = None
 
@@ -294,14 +302,10 @@ class GroupingSession:
 
 @dataclass
 class Project:
-    """A unit of work needing a team; declares size band and required skills/roles.
-
-    Legacy entity — in the new structure, GroupingSession replaces most of Project's role.
-    Kept for backward compatibility with existing matching engine.
-    """
+    """Legacy unit of work for matching engine compatibility."""
     id: str
-    min_size: int = 3   # A-02
-    max_size: int = 5   # A-02
+    min_size: int = 3
+    max_size: int = 5
     required_roles: tuple[str, ...] = ()
     required_skills: tuple[str, ...] = ()
     weights: dict[str, float] = field(default_factory=dict)
@@ -313,8 +317,8 @@ class Project:
 
 @dataclass
 class Constraints:
-    must_pair: list[tuple[str, str]] = field(default_factory=list)   # hard (R2)
-    cannot_pair: list[tuple[str, str]] = field(default_factory=list)  # hard (R2)
+    must_pair: list[tuple[str, str]] = field(default_factory=list)
+    cannot_pair: list[tuple[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -323,8 +327,11 @@ class Team:
     member_ids: list[str]
     rationale: str = ""
     scores: dict[str, float] = field(default_factory=dict)
-    status: TeamStatus = TeamStatus.AI_SUGGESTED
-    name: str = ""  # display name, e.g. "Team 03"
+    status: TeamStatus = TeamStatus.FORMING
+    name: str = ""  # e.g. "Binary Builders"
+    leader_id: str = ""
+    locked: bool = False
+    version: int = 1
 
 
 @dataclass
@@ -333,30 +340,24 @@ class Formation:
     status: str
     seed: int
     teams: list[Team] = field(default_factory=list)
-    unassignable: list[tuple[str, str]] = field(default_factory=list)  # (student_id, reason)
-    conflicts: list[str] = field(default_factory=list)  # why infeasible
+    unassignable: list[tuple[str, str]] = field(default_factory=list)
+    conflicts: list[str] = field(default_factory=list)
     balance: float = 0.0
 
 
-# ---------------------------------------------------------------------------
-# Student-led Team Formation Entities
-# ---------------------------------------------------------------------------
-
 @dataclass
 class DraftTeam:
-    """A team created by a student (student-led or hybrid mode)."""
     id: str
     session_id: str
     name: str
-    created_by: str             # student who created the team
+    created_by: str
     member_ids: list[str] = field(default_factory=list)
-    status: TeamStatus = TeamStatus.DRAFT
+    status: TeamStatus = TeamStatus.FORMING
     created_at: datetime | None = None
 
 
 @dataclass
 class TeamInvitation:
-    """Invitation from a team to a student."""
     id: str
     team_id: str
     from_student_id: str
@@ -368,37 +369,28 @@ class TeamInvitation:
 
 @dataclass
 class JoinRequest:
-    """Request from a student to join a team."""
     id: str
     team_id: str
     student_id: str
-    status: InvitationStatus = InvitationStatus.PENDING
+    status: JoinRequestStatus = JoinRequestStatus.PENDING
     message: str = ""
     created_at: datetime | None = None
 
 
-# ---------------------------------------------------------------------------
-# Operational Entities (kept from skeleton, extended)
-# ---------------------------------------------------------------------------
-
 @dataclass
 class Cohort:
-    """Legacy: A group of students owned by one lecturer (object-level authz anchor, BR-13).
-
-    In the new model, ClassSection replaces Cohort. Kept for backward compatibility
-    with existing matching engine and tests.
-    """
+    """Legacy cohort anchor."""
     id: str
-    owner_id: str  # the lecturer (user id) who owns this cohort
+    owner_id: str
     name: str = ""
 
 
 @dataclass
 class FormationRun:
     id: str
-    cohort_id: str      # or class_section_id
-    session_id: str = ""  # new: links to GroupingSession
-    project_id: str = ""  # legacy
+    cohort_id: str
+    session_id: str = ""
+    project_id: str = ""
     min_size: int = 3
     max_size: int = 5
     seed: int = 0
@@ -411,11 +403,11 @@ class FormationRun:
 @dataclass
 class Constraint:
     id: str
-    cohort_id: str      # or class_section_id
-    type: str           # 'must_pair', 'cannot_pair'
+    cohort_id: str
+    type: str  # 'must_pair', 'cannot_pair'
     student_a: str
     student_b: str
-    status: str = "pending"  # 'pending', 'approved', 'rejected'
+    status: str = "PENDING"
 
 
 @dataclass
@@ -439,17 +431,14 @@ class AuditEvent:
     timestamp: datetime = field(default_factory=datetime.utcnow)
 
 
-# ---------------------------------------------------------------------------
-# User Management
-# ---------------------------------------------------------------------------
-
 @dataclass
 class User:
-    """System user — can be a student, lecturer, or admin."""
     id: str
     email: str
     display_name: str = ""
-    role: str = "student"       # "student", "lecturer", "admin"
+    role: UserRole = UserRole.STUDENT
+    user_status: UserStatus = UserStatus.ACTIVE
+    student_code: str = ""
     campus_id: str = ""
     is_active: bool = True
     created_at: datetime | None = None
@@ -457,7 +446,6 @@ class User:
 
 @dataclass
 class Enrollment:
-    """Links a student to a class section."""
     id: str
     student_id: str
     class_section_id: str

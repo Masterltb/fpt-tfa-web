@@ -1,165 +1,275 @@
-# API Contract — Team Formation Assistant
+# TEAM FORMATION ASSISTANT (TFA)
+**Full REST API Specification for MVP**
 
-## Conventions
-
-- Transport: REST/JSON over HTTPS. Auth: bearer token (Firebase); never a token in a URL.
-- Error shape: `{ "code": string, "message": string, "details": object }`; HTTP status is authoritative.
-- Versioned under `/v1`. Timestamps are ISO-8601 UTC. Pagination via `limit` and `cursor`.
-- All endpoints require authentication unless marked PUBLIC.
-
----
-
-## Admin Endpoints
-
-| Method | Path | Purpose | Errors |
-|--------|------|---------|--------|
-| GET | /v1/admin/dashboard | Dashboard statistics | 401, 403 |
-| **Campuses** | | | |
-| POST | /v1/admin/campuses | Create a campus | 400, 403 |
-| GET | /v1/admin/campuses | List all campuses | 403 |
-| PUT | /v1/admin/campuses/{id} | Update a campus | 400, 403, 404 |
-| DELETE | /v1/admin/campuses/{id} | Deactivate a campus | 403, 404 |
-| **Majors** | | | |
-| POST | /v1/admin/majors | Create a major | 400, 403 |
-| GET | /v1/admin/majors | List all majors | 403 |
-| PUT | /v1/admin/majors/{id} | Update a major | 400, 403, 404 |
-| **Terms** | | | |
-| POST | /v1/admin/terms | Create a term | 400, 403 |
-| GET | /v1/admin/terms | List terms (filter by campus) | 403 |
-| PUT | /v1/admin/terms/{id} | Update a term | 400, 403, 404 |
-| **Courses** | | | |
-| POST | /v1/admin/courses | Create a course | 400, 403 |
-| GET | /v1/admin/courses | List courses | 403 |
-| PUT | /v1/admin/courses/{id} | Update a course | 400, 403, 404 |
-| **Class Sections** | | | |
-| POST | /v1/admin/class-sections | Create a class section | 400, 403 |
-| GET | /v1/admin/class-sections | List class sections (filter by term, course) | 403 |
-| PUT | /v1/admin/class-sections/{id} | Update a class section | 400, 403, 404 |
-| POST | /v1/admin/class-sections/{id}/import-roster | Import students via CSV/Excel | 400, 403, 404 |
-| GET | /v1/admin/class-sections/{id}/roster | View roster | 403, 404 |
-| **Users** | | | |
-| POST | /v1/admin/users | Create a user | 400, 403 |
-| GET | /v1/admin/users | List users (filter by role) | 403 |
-| PUT | /v1/admin/users/{id} | Update a user | 400, 403, 404 |
-| PATCH | /v1/admin/users/{id}/status | Activate/deactivate | 403, 404 |
-| **Audit** | | | |
-| GET | /v1/admin/audit-logs | Query audit events | 403 |
+- Document version: 1.0.0
+- Date: 01/08/2026
+- Base path: `/api/v1`
+- Product scope: Standalone web platform for FPT students, lecturers and administrators
+- Integration scope: No direct FAP integration in MVP; future-ready only
 
 ---
 
-## Student Endpoints
-
-| Method | Path | Purpose | Errors |
-|--------|------|---------|--------|
-| GET | /v1/students/me/profile | Read own profile | 401 |
-| PUT | /v1/students/me/profile | Update own profile | 400, 401 |
-| GET | /v1/students/me/dashboard | Dashboard data | 401 |
-| **Classes** | | | |
-| GET | /v1/students/me/classes | List enrolled class sections | 401 |
-| **Team DNA** | | | |
-| GET | /v1/students/me/team-dna/{classSectionId} | Read own Team DNA | 401, 404 |
-| PUT | /v1/students/me/team-dna/{classSectionId} | Update Team DNA | 400, 401 |
-| GET | /v1/students/me/team-dna/{classSectionId}/completion | Completion percentage | 401, 404 |
-| **Teams** | | | |
-| POST | /v1/students/me/teams | Create a draft team | 400, 401 |
-| GET | /v1/students/me/teams | List own teams | 401 |
-| POST | /v1/students/me/teams/{teamId}/invite | Invite a student | 400, 401, 403 |
-| POST | /v1/students/me/teams/{teamId}/submit | Submit team for approval | 401, 403, 409 |
-| POST | /v1/students/me/join-requests | Submit a join request | 400, 401 |
-| **Invitations** | | | |
-| GET | /v1/students/me/invitations | List pending invitations | 401 |
-| POST | /v1/students/me/invitations/{id}/respond | Accept or decline | 400, 401, 404 |
-| **Recommendations** | | | |
-| GET | /v1/students/me/recommendations/{sessionId} | AI-recommended teams | 401, 404 |
-| **Official Team** | | | |
-| GET | /v1/students/me/official-team/{sessionId} | View published team result | 401, 404 |
-| **Constraints** | | | |
-| POST | /v1/students/me/constraints | Propose must/cannot-pair | 400, 401 |
+## 1. Document Purpose
+Tài liệu này là hợp đồng API hoàn chỉnh cho MVP của Team Formation Assistant. Hệ thống mô phỏng cấu trúc học tập của Đại học FPT gồm Campus, Term, Course, Class Section, Lecturer và Student Roster nhưng hoạt động độc lập. Dữ liệu được tạo thủ công hoặc import CSV/XLSX. Mục tiêu chính là hỗ trợ tạo nhóm cân bằng dựa trên kỹ năng, ngành học, kinh nghiệm, lịch rảnh, sở thích, mức độ cam kết và vai trò mong muốn.
 
 ---
 
-## Lecturer Endpoints
+## 2. MVP Scope and Non-goals
 
-| Method | Path | Purpose | Errors |
-|--------|------|---------|--------|
-| GET | /v1/lecturer/dashboard | Dashboard data | 401, 403 |
-| **Classes** | | | |
-| GET | /v1/lecturer/my-classes | List owned class sections | 401, 403 |
-| GET | /v1/lecturer/classes/{id}/roster | View class roster | 403, 404 |
-| GET | /v1/lecturer/classes/{id}/student-readiness | Team DNA completion stats | 403, 404 |
-| **Grouping Sessions** | | | |
-| POST | /v1/lecturer/classes/{id}/sessions | Create grouping session | 400, 403 |
-| GET | /v1/lecturer/classes/{id}/sessions | List sessions | 403 |
-| PUT | /v1/lecturer/sessions/{id} | Update session config | 400, 403, 404 |
-| PATCH | /v1/lecturer/sessions/{id}/status | Change session status | 403, 404, 409 |
-| **Matching** | | | |
-| POST | /v1/lecturer/sessions/{id}/run-matching | Trigger AI matching | 403, 409, 422 |
-| GET | /v1/lecturer/sessions/{id}/results | Get formation results | 403, 404 |
-| **Review & Override** | | | |
-| POST | /v1/lecturer/sessions/{id}/override | Adjust team assignments | 400, 403, 409 |
-| POST | /v1/lecturer/sessions/{id}/publish | Approve and publish | 403, 409 |
-| **Constraints** | | | |
-| GET | /v1/lecturer/sessions/{id}/constraints | List constraints | 403 |
-| PATCH | /v1/lecturer/constraints/{id}/status | Approve/reject constraint | 403, 404 |
-| **Reports** | | | |
-| GET | /v1/lecturer/classes/{id}/reports | Basic class reports | 403, 404 |
+### 2.1 In Scope
+- JWT authentication, refresh token and role-based authorization.
+- Quản lý Campus, Term, Major, Course, Class Section và roster.
+- Import user và roster bằng CSV/XLSX.
+- Team DNA profile: skills, preferred roles, experience, interests, work style and commitment.
+- Weekly availability và lịch học mô phỏng của class section.
+- Student-led, Lecturer-led và Hybrid team formation.
+- Invitation, join request, draft team, submit, lecturer review, approval and publication.
+- Matching runs, explainable recommendations, locked teams and manual override.
+- Notifications, basic dashboards, exports and audit logs.
+
+### 2.2 Explicit Non-goals
+- Không đăng nhập bằng FAP hoặc crawl dữ liệu FAP trong MVP.
+- Không quản lý điểm, điểm danh, lịch thi hoặc học phí.
+- Không thay thế LMS/FAP và không quản lý toàn bộ vòng đời môn học.
+- Không dùng dữ liệu nhạy cảm như giới tính, tôn giáo, sức khỏe hoặc tài chính để matching.
+- Không để AI tự publish nhóm; giảng viên là người phê duyệt cuối cùng.
+- Không xây chat, video call, task board hoặc peer grading trong MVP.
 
 ---
 
-## Public Endpoints
-
-| Method | Path | Purpose | Errors |
-|--------|------|---------|--------|
-| GET | /health | Health check | — |
-
----
-
-## Formation request/response (shape)
-
-### Run Matching Request
-```json
-{
-  "session_id": "string",
-  "seed": 42
-}
+## 3. Academic Domain Model
 ```
+Campus → Term → Course → Class Section → Enrollment
+                                  ├→ Timetable
+                                  └→ Grouping Session → Teams → Members
+```
+Mỗi Grouping Session thuộc đúng một Class Section. Một sinh viên chỉ được có tối đa một team active/published trong cùng session. Session có thể sử dụng `STUDENT_LED`, `LECTURER_LED` hoặc `HYBRID`.
 
-### Run Matching Response (per team)
+---
+
+## 4. Architecture and Implementation Assumptions
+- REST over HTTPS, JSON UTF-8, base path `/api/v1`.
+- IDs là opaque string/UUID; client không được suy luận ý nghĩa từ ID.
+- Timestamps dùng ISO 8601 UTC; UI chuyển sang Asia/Bangkok khi hiển thị.
+- Access token mặc định 15 phút; refresh token mặc định 7 ngày, đều cấu hình được.
+- PostgreSQL là database chính; object storage dùng cho file import nếu cần.
+- Matching có thể chạy qua worker nhưng contract trả `202 Accepted` và trạng thái `MatchRun`.
+- Frontend không gọi Matching Engine trực tiếp; mọi thao tác đi qua Backend API.
+- Mọi thay đổi nhạy cảm được ghi Audit Log.
+
+---
+
+## 5. API Conventions
+
+### 5.1 Headers
+| Header | Required | Description |
+|---|---:|---|
+| Authorization | Yes for protected endpoints | Bearer access token. |
+| Content-Type | For body | `application/json`; file upload uses `multipart/form-data`. |
+| Accept-Language | No | `vi-VN` or `en-US`; default `vi-VN`. |
+| X-Correlation-Id | No | Client-provided trace ID; server creates one if absent. |
+| Idempotency-Key | Recommended | Required for publish, import, match-run creation and selected actions. |
+| If-Match | Recommended | Optimistic concurrency using resource version/ETag. |
+
+### 5.2 Success Envelope
 ```json
 {
-  "team_id": "string",
-  "name": "Team 03",
-  "members": [
-    { "student_id": "string", "name": "string", "role": "string" }
-  ],
-  "scores": {
-    "overall": 0.91,
-    "skill_coverage": 0.95,
-    "experience_balance": 0.88,
-    "schedule_overlap": 0.85,
-    "role_match": 0.92,
-    "commitment_compat": 0.90,
-    "interest_similarity": 0.78,
-    "major_diversity": 0.80,
-    "working_pref_compat": 0.75
+  "data": {
+    "id": "..."
   },
-  "rationale": "Team 03 has a 91% compatibility score because it covers all required roles, has strong backend and UI skills, and all five members share two common free-time slots.",
-  "warnings": ["No common Monday slots"],
-  "unmet_soft": ["Interest similarity below threshold"]
+  "meta": {
+    "page": 1,
+    "pageSize": 20,
+    "total": 125
+  },
+  "traceId": "trc_01J..."
 }
 ```
 
-### Unassignable student
+### 5.3 Pagination, Filter and Sort
+- `page` starts at 1; default 1.
+- `pageSize` default 20, maximum 100.
+- `q` performs normalized text search where supported.
+- `sort` accepts comma-separated fields, prefix `-` for descending, e.g. `-createdAt,name`.
+- Filters use explicit query names such as `status`, `termId`, `sectionId`, `role`.
+
+### 5.4 Error Format (RFC 7807)
 ```json
 {
-  "student_id": "string",
-  "reason": "Cannot satisfy must-pair constraint with student X who is already in a full team."
+  "type": "https://tfa.example/errors/team-size-violation",
+  "title": "Business rule violation",
+  "status": 422,
+  "code": "TEAM_SIZE_VIOLATION",
+  "detail": "Team must contain between 4 and 5 members.",
+  "instance": "/api/v1/teams/team_01J.../submit",
+  "traceId": "trc_01J...",
+  "errors": [
+    {
+      "field": "members",
+      "message": "Current size is 3.",
+      "code": "MIN_SIZE"
+    }
+  ]
 }
 ```
 
-## Validation and errors
+### 5.5 Status Code Policy
+| Code | Meaning |
+|---:|---|
+| 200 | Successful read/update/action with response body. |
+| 201 | Resource created. |
+| 202 | Accepted for import or matching job. |
+| 204 | Successful action without body. |
+| 400 | Malformed request, invalid JSON or invalid parameter type. |
+| 401 | Missing/expired/invalid authentication. |
+| 403 | Authenticated but not permitted. |
+| 404 | Resource does not exist or is hidden by authorization. |
+| 409 | State conflict, duplicate, stale version or concurrent update. |
+| 413 | Uploaded file exceeds limit. |
+| 415 | Unsupported media type. |
+| 422 | Business validation failed. |
+| 429 | Rate limit exceeded. |
+| 500 | Unexpected server error; never expose stack trace. |
+| 503 | Service temporarily unavailable. |
 
-- Every input is validated at the API boundary with pydantic models; unknown fields rejected.
-- `422` when a run is infeasible (hard constraints cannot be satisfied) — the response names
-  the conflicting constraints rather than returning a partial, invalid formation.
-- `409` when attempting to modify a published/committed formation.
+---
+
+## 6. Enumerations and Lifecycles
+
+### 6.1 Enums
+- **UserRole**: `STUDENT`, `LECTURER`, `ADMIN`
+- **UserStatus**: `ACTIVE`, `INACTIVE`, `SUSPENDED`
+- **TermStatus**: `PLANNED`, `ACTIVE`, `CLOSED`, `ARCHIVED`
+- **SectionStatus**: `DRAFT`, `ACTIVE`, `ARCHIVED`
+- **GroupingMode**: `STUDENT_LED`, `LECTURER_LED`, `HYBRID`
+- **GroupingSessionStatus**: `DRAFT`, `OPEN`, `FROZEN`, `MATCHING`, `REVIEW`, `PUBLISHED`, `CLOSED`, `CANCELLED`
+- **TeamStatus**: `FORMING`, `SUBMITTED`, `APPROVED`, `PUBLISHED`, `REJECTED`, `DISSOLVED`
+- **InvitationStatus**: `PENDING`, `ACCEPTED`, `DECLINED`, `CANCELLED`, `EXPIRED`
+- **JoinRequestStatus**: `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`
+- **MatchRunStatus**: `QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`
+- **CommitmentLevel**: `LOW`, `MEDIUM`, `HIGH`
+- **SkillLevel**: `1` (Beginner), `2` (Basic), `3` (Intermediate), `4` (Advanced), `5` (Expert)
+
+### 6.2 Grouping Session State Machine
+```
+DRAFT → OPEN → FROZEN → MATCHING → REVIEW → PUBLISHED → CLOSED
+  └──────────────→ CANCELLED
+REVIEW → OPEN is allowed only before publication and requires a reason.
+```
+
+### 6.3 Team State Machine
+```
+FORMING → SUBMITTED → APPROVED → PUBLISHED
+   ↑          └→ REJECTED → FORMING
+   └──── withdraw ────────┘
+FORMING may become DISSOLVED before session publication.
+```
+
+---
+
+## 7. Endpoint Summary (135 Total Endpoints)
+
+### 7.1 Platform & Auth (9 endpoints)
+- `GET /api/v1/health`
+- `GET /api/v1/config/public`
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/reset-password`
+- `GET /api/v1/auth/me`
+- `PATCH /api/v1/auth/me/password`
+
+### 7.2 Users (7 endpoints)
+- `GET /api/v1/users`
+- `POST /api/v1/users`
+- `GET /api/v1/users/{userId}`
+- `PATCH /api/v1/users/{userId}`
+- `PATCH /api/v1/users/{userId}/status`
+- `POST /api/v1/users/import`
+- `GET /api/v1/users/imports/{importId}`
+
+### 7.3 Academic Catalogs (29 endpoints)
+- Campuses: `GET`, `POST`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`
+- Terms: `GET`, `POST`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`, `POST /{termId}/activate`
+- Majors: `GET`, `POST`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`
+- Courses: `GET`, `POST`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`
+- Skills: `GET`, `POST`, `GET /{id}`, `PATCH /{id}`
+- Team Roles: `GET`, `POST`, `GET /{id}`, `PATCH /{id}`
+
+### 7.4 Sections & Rosters (14 endpoints)
+- `GET /api/v1/sections`
+- `POST /api/v1/sections`
+- `GET /api/v1/sections/{sectionId}`
+- `PATCH /api/v1/sections/{sectionId}`
+- `DELETE /api/v1/sections/{sectionId}`
+- `GET /api/v1/sections/{sectionId}/lecturers`
+- `POST /api/v1/sections/{sectionId}/lecturers`
+- `DELETE /api/v1/sections/{sectionId}/lecturers/{lecturerId}`
+- `GET /api/v1/sections/{sectionId}/students`
+- `POST /api/v1/sections/{sectionId}/students`
+- `DELETE /api/v1/sections/{sectionId}/students/{studentId}`
+- `POST /api/v1/sections/{sectionId}/students/import`
+- `GET /api/v1/sections/{sectionId}/timetable`
+- `PUT /api/v1/sections/{sectionId}/timetable`
+
+### 7.5 Student Profile & Team DNA (12 endpoints)
+- `GET /api/v1/students/me/dashboard`
+- `GET /api/v1/students/me/sections`
+- `GET /api/v1/students/me/team-profile`
+- `PUT /api/v1/students/me/team-profile`
+- `GET /api/v1/students/me/availability`
+- `PUT /api/v1/students/me/availability`
+- `GET /api/v1/students/me/experiences`
+- `POST /api/v1/students/me/experiences`
+- `PATCH /api/v1/students/me/experiences/{experienceId}`
+- `DELETE /api/v1/students/me/experiences/{experienceId}`
+- `GET /api/v1/students/me/profile-readiness`
+- `GET /api/v1/students/{studentId}/team-profile`
+
+### 7.6 Grouping Sessions (14 endpoints)
+- `GET /api/v1/grouping-sessions`
+- `POST /api/v1/grouping-sessions`
+- `GET /api/v1/grouping-sessions/{sessionId}`
+- `PATCH /api/v1/grouping-sessions/{sessionId}`
+- `DELETE /api/v1/grouping-sessions/{sessionId}`
+- `GET /api/v1/grouping-sessions/{sessionId}/participants`
+- `GET /api/v1/grouping-sessions/{sessionId}/readiness`
+- `POST /api/v1/grouping-sessions/{sessionId}/open`
+- `POST /api/v1/grouping-sessions/{sessionId}/freeze`
+- `POST /api/v1/grouping-sessions/{sessionId}/reopen`
+- `POST /api/v1/grouping-sessions/{sessionId}/cancel`
+- `POST /api/v1/grouping-sessions/{sessionId}/publish`
+- `GET /api/v1/students/me/grouping-sessions`
+- `GET /api/v1/students/me/grouping-sessions/{sessionId}`
+
+### 7.7 Teams (16 endpoints)
+- `GET /api/v1/grouping-sessions/{sessionId}/teams`
+- `POST /api/v1/grouping-sessions/{sessionId}/teams`
+- `GET /api/v1/teams/{teamId}`
+- `PATCH /api/v1/teams/{teamId}`
+- `DELETE /api/v1/teams/{teamId}`
+- `GET /api/v1/teams/{teamId}/members`
+- `POST /api/v1/teams/{teamId}/members`
+- `DELETE /api/v1/teams/{teamId}/members/{studentId}`
+- `POST /api/v1/teams/{teamId}/leave`
+- `POST /api/v1/teams/{teamId}/submit`
+- `POST /api/v1/teams/{teamId}/withdraw`
+- `POST /api/v1/teams/{teamId}/approve`
+- `POST /api/v1/teams/{teamId}/reject`
+- `POST /api/v1/teams/{teamId}/lock`
+- `POST /api/v1/teams/{teamId}/unlock`
+- `POST /api/v1/teams/{teamId}/move-member`
+
+### 7.8 Invitations & Join Requests (12 endpoints)
+- Invitations: `GET /teams/{teamId}/invitations`, `POST /teams/{teamId}/invitations`, `GET /students/me/invitations`, `POST /invitations/{id}/accept`, `POST /invitations/{id}/decline`, `DELETE /invitations/{id}`
+- Join Requests: `GET /teams/{teamId}/join-requests`, `POST /teams/{teamId}/join-requests`, `GET /students/me/join-requests`, `POST /join-requests/{id}/approve`, `POST /join-requests/{id}/reject`, `DELETE /join-requests/{id}`
+
+### 7.9 Matching & Review Board (12 endpoints)
+- Matching: `POST /grouping-sessions/{sessionId}/match-runs`, `GET /grouping-sessions/{sessionId}/match-runs`, `GET /match-runs/{runId}`, `GET /match-runs/{runId}/recommendations`, `POST /match-runs/{runId}/apply`, `POST /match-runs/{runId}/cancel`
+- Review Board: `GET /grouping-sessions/{sessionId}/review-board`, `PATCH /grouping-sessions/{sessionId}/review-board`, `POST /grouping-sessions/{sessionId}/validate`, `GET /grouping-sessions/{sessionId}/conflicts`, `GET /grouping-sessions/{sessionId}/balance-report`, `POST /grouping-sessions/{sessionId}/auto-fill`
+
+### 7.10 Notifications, Reports & Audit (10 endpoints)
+- Notifications: `GET /notifications`, `PATCH /notifications/{id}/read`, `POST /notifications/read-all`, `GET /notifications/unread-count`
+- Reports: `GET /reports/dashboard/admin`, `GET /reports/dashboard/lecturer`, `GET /grouping-sessions/{sessionId}/reports/summary`, `GET /grouping-sessions/{sessionId}/exports/teams.csv`, `GET /sections/{sectionId}/exports/roster.csv`
+- Audit: `GET /audit-logs`
