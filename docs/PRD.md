@@ -1,109 +1,227 @@
-# Product Requirements Document — Team Formation Assistant
+# Team Formation Assistant (TFA) — Product Requirements Document (PRD)
 
-- **Version:** 1.0.0  ·  **Date:** 2026-07-16  ·  **Status:** draft
-- **Related:** `docs/BRD.md`, `docs/domain.md`, `docs/rbac.md`, `docs/api-contract.md`,
-  `docs/constitution.md`, feature spec `specs/001-team-suggestion/spec.md`
-- **Priority:** MoSCoW (Must / Should / Could / Won't-yet)
-
----
-
-## 1. Business Capabilities
-
-The product-level capabilities that realize the BRD objectives. Each maps to business goals
-and is delivered by the functional requirements in §2.
-
-| ID | Capability | Delivers (BRD) | Notes |
-|----|------------|----------------|-------|
-| BC-01 | **Student profile management** | O5, BR-11 | Skills, major, experience, availability, preferences, desired roles |
-| BC-02 | **Constraint capture** | BR-02 | Student proposes must/cannot-pair; lecturer approves |
-| BC-03 | **Cohort & project setup** | O1 | Size band, required skills/roles, weights |
-| BC-04 | **AI team formation** | O1, O2, O5 | Balanced teams satisfying hard constraints |
-| BC-05 | **Explainable suggestions** | O4, BR-10 | Rationale + traded-off preferences per team |
-| BC-06 | **Review & override** | O3, BR-09 | Lecturer edits and commits final teams |
-| BC-07 | **Reproducibility & audit** | O4, BR-08 | Versioned, seeded, logged runs |
-| BC-08 | **Access control & privacy** | BR-11, BR-12, BR-13 | Per-role, per-ownership; no protected attributes |
+**Version:** MVP 1.0  
+**Date:** 02/08/2026  
+**Status:** Approved Specification  
+**Product Type:** Web platform for university team formation and team-health management  
+**Initial Market:** FPT University; designed to scale to multi-campus, multi-major universities  
+**Deployment Approach:** Standalone MVP using CSV/Excel import; integration-ready for FAP/LMS later.
 
 ---
 
-## 2. Functional Requirements
+## 1. Product Vision
 
-Grouped by capability. "Trace" links to business rules (BR) / objectives (O) and, where
-applicable, to the feature spec's requirements (spec FR-###).
+Team Formation Assistant helps universities form project teams more fairly and effectively.
 
-### BC-01 Student profile management
-| ID | Requirement | Priority | Acceptance | Trace |
-|----|-------------|----------|------------|-------|
-| FR-01 | A student can create/update their own profile (skills+proficiency, major, experience, availability, preferences, desired roles). | Must | Saved values persist; invalid input rejected at the boundary | BC-01 |
-| FR-02 | A student can view only their own profile and the teams they belong to. | Must | Access to another student's profile returns 403 | BR-11, spec FR-010 |
+Instead of relying on friendships, group chats, or manual Excel assignment, TFA uses student profiles, course rules, and group requirements to:
 
-### BC-02 Constraint capture
-| ID | Requirement | Priority | Acceptance | Trace |
-|----|-------------|----------|------------|-------|
-| FR-03 | A student can propose a must-pair / cannot-pair constraint involving themselves. | Should | Proposal recorded as pending | BR-02 |
-| FR-04 | A lecturer approves/rejects proposed constraints before a run uses them. | Should | Only approved constraints affect a run | BR-02 |
+- Help students find suitable teammates.
+- Help lecturers form balanced teams quickly.
+- Support groups that need additional or replacement members.
+- Detect team risks early.
+- Help lecturers intervene before a group fails.
 
-### BC-03 Cohort & project setup
-| ID | Requirement | Priority | Acceptance | Trace |
-|----|-------------|----------|------------|-------|
-| FR-05 | A lecturer can create a cohort and add projects with a team-size band and required skills/roles. | Must | Project stores `[min,max]` and requirements | BR-01 |
-| FR-06 | A lecturer can set formation weights or accept defaults. | Should | Defaults applied when unset | BRD assumption |
-
-### BC-04 AI team formation
-| ID | Requirement | Priority | Acceptance | Trace |
-|----|-------------|----------|------------|-------|
-| FR-07 | A lecturer who owns the cohort can trigger a formation run for a project. | Must | Run starts; non-owner gets 403 | BR-13, spec FR-001 |
-| FR-08 | Produced teams satisfy the size band. | Must | Property test over generated cohorts | BR-01, spec FR-002 |
-| FR-09 | No team violates a must-pair / cannot-pair constraint. | Must | Property test: 0 violations | BR-02, spec FR-003 |
-| FR-10 | Every eligible student is assigned exactly once or flagged unassignable with a reason. | Must | No silent drops | BR-07, spec FR-004 |
-| FR-11 | Competency/experience are balanced across teams as far as hard constraints allow. | Must | Balance beats random baseline on average | BR-04, spec FR-008 |
-| FR-12 | When hard constraints are infeasible, the run reports the conflicting constraints instead of a partial result. | Must | 422 names conflicts | BR-03, spec FR-007 |
-
-### BC-05 Explainable suggestions
-| ID | Requirement | Priority | Acceptance | Trace |
-|----|-------------|----------|------------|-------|
-| FR-13 | Each suggested team includes a readable rationale and lists traded-off soft preferences. | Must | Rationale present for 100% of teams | BR-10, spec FR-005 |
-
-### BC-06 Review & override
-| ID | Requirement | Priority | Acceptance | Trace |
-|----|-------------|----------|------------|-------|
-| FR-14 | A lecturer can override any assignment; the override becomes the committed result. | Must | Committed teams reflect overrides, not the AI | BR-09, spec FR-009 |
-| FR-15 | A student can view their committed team and its short reason. | Should | Team + reason visible to members only | BR-11 |
-
-### BC-07 Reproducibility & audit
-| ID | Requirement | Priority | Acceptance | Trace |
-|----|-------------|----------|------------|-------|
-| FR-16 | A run is reproducible from inputs + seed and is stored as an immutable version. | Must | Same inputs+seed → identical teams | BR-08, spec FR-006 |
-| FR-17 | Every run logs inputs, seed, and result version for audit. | Should | Log entry exists per run | O4 |
-
-### BC-08 Access control & privacy
-| ID | Requirement | Priority | Acceptance | Trace |
-|----|-------------|----------|------------|-------|
-| FR-18 | Every protected endpoint enforces role + object-ownership server-side. | Must | Unauthorized/other-owner → 403 | BR-11/BR-13, spec SC-004 |
-| FR-19 | Protected/sensitive attributes are never used as matching signals or returned to peers. | Must | Signals exclude protected attributes | BR-12 |
+> TFA does not replace lecturer or student decisions. It provides transparent recommendations and workflow control.
 
 ---
 
-## 3. Non-Functional Requirements
+## 2. Problem Statement
 
-| ID | Category | Requirement | Target / acceptance | Trace |
-|----|----------|-------------|---------------------|-------|
-| NFR-01 | Performance | Formation run for a 60-student cohort completes within the effort target. | ≤ 2 min p95 (excl. review) | O1, spec SC-003 |
-| NFR-02 | Reproducibility | Deterministic given inputs + seed. | Byte-identical across runs | BR-08, spec SC-002 |
-| NFR-03 | Correctness | Hard constraints never violated. | 100% over property tests | BR-01/02/07, spec SC-001 |
-| NFR-04 | Security / Privacy | AuthN + per-request authZ; no protected attributes; no cross-student leakage. | 403 on unauthorized; audits pass | BR-11/12/13 |
-| NFR-05 | Explainability | Suggestions are human-auditable. | Rationale on 100% of teams | BR-10 |
-| NFR-06 | Reliability | A failed run leaves no partial committed formation. | Atomic commit; safe retry | BR-07 |
-| NFR-07 | Usability | Lecturer completes run→review→commit without training. | Task success in usability test | O1 |
-| NFR-08 | Accessibility | Web UI meets WCAG 2.1 AA. | Automated + manual a11y checks | policy |
-| NFR-09 | Scalability | Handles cohorts up to the assumed size band without redesign. | Meets NFR-01 at max assumed size | BRD assumption |
-| NFR-10 | Maintainability | Domain pure; optimizer behind an interface; typed + linted. | mypy/ruff/tsc clean; boundaries hold | code-style |
-| NFR-11 | Auditability | Runs are logged and reproducible. | Log + version per run | O4 |
+### Student Problems
+- Difficulty finding a group before deadlines.
+- Students with fewer social connections are often left behind.
+- Groups may lack essential roles such as technical, design, research, or presentation.
+- Workload and commitment are often uneven.
+- Students do not know whether a group is truly suitable before joining.
+
+### Lecturer Problems
+- Manual grouping takes time.
+- It is hard to balance skill, major, role, schedule, and team size at the same time.
+- It is difficult to track groups that are inactive, conflicted, or lacking members.
+- It is difficult to explain why one student was placed in a particular group.
+
+### University Problems
+- Project-based learning quality depends heavily on teamwork.
+- There is little structured data on why teams succeed or fail.
+- Existing academic systems manage enrollment, but not team matching and team health.
 
 ---
 
-## Traceability summary
+## 3. Product Goals & Success Metrics
 
-`BRD objective (O#) → capability (BC-##) → functional (FR-##) / non-functional (NFR-##) →
-business rule (BR-##) / domain rule (R#) → feature spec (spec FR-###/SC-###) → tests`.
-This chain lets Verify confirm every requirement is covered and every test traces back to a
-business reason.
+### Primary Goals
+- Reduce time spent by lecturers on group formation.
+- Ensure every eligible student has a path to join a group.
+- Support both same-major and interdisciplinary teams.
+- Make group formation transparent and explainable.
+- Detect team imbalance early and support fair adjustment.
+
+### Success Metrics (Pilot KPIs)
+- Reduce lecturer group-formation time by at least 50%.
+- At least 80% student satisfaction with group formation.
+- At least 90% groups satisfy minimum size and required roles before publication.
+- Less than 20% of suggested groups require lecturer manual changes.
+- Reduce ungrouped students near deadline.
+- Track how many red-risk groups receive intervention before the project ends.
+
+---
+
+## 4. Scope
+
+### In Scope
+- Multi-campus, multi-major academic structure.
+- Admin, Lecturer, and Student roles.
+- Class/project roster import through CSV or Excel.
+- Lecturer-controlled group requirements.
+- Lecturer-led, student-led, and hybrid grouping modes.
+- Matching and explainable recommendations.
+- Group invitation and join-request workflow.
+- Group vacancy and replacement workflow (Smart Rebalance).
+- Team health check-ins and risk alerts.
+- Audit history and basic reporting.
+
+### Out of Scope for MVP
+- Direct FAP integration.
+- Automatic grading.
+- Full project management features such as task boards.
+- Internal chat/video calls.
+- Automatic removal of a student from a group.
+- Predicting academic performance or grading students based on team-health data.
+- Using sensitive personal data for matching.
+
+---
+
+## 5. Multi-Major Support Requirement
+
+TFA must support team formation for students across multiple majors, classes, programs, and campuses.
+
+The system must allow:
+- Admin to configure campuses, programs, majors, academic years, and terms.
+- Lecturers to select one or more majors eligible for each Grouping Space.
+- Lecturers to decide whether a space is same-major or interdisciplinary.
+- Lecturers to set minimum/maximum representation of a major in each group.
+- The matching engine to validate major rules before recommending or publishing a group.
+- Students to view and join only groups for which their major, class, and course eligibility are valid.
+
+> **Business rule:** TFA never assumes that interdisciplinary teams are always better. Same-major versus interdisciplinary composition is configured by the lecturer for each course, project, or thesis.
+
+---
+
+## 6. User Roles and Permissions
+
+| Role | Main Responsibilities |
+|---|---|
+| System / University Admin | Configures academic data, manages users, roles, imports, policies, and reports |
+| Lecturer | Creates and manages grouping spaces, sets requirements, reviews, and publishes groups |
+| Student | Maintains profile, searches for teams, joins/invites members, and submits team check-ins |
+
+---
+
+## 7. Academic and Organizational Model
+
+```text
+Campus
+  └── Academic Year
+        └── Term
+              └── Program / Major
+                    └── Course Offering / Project Space (Grouping Space)
+                          └── Eligible Students
+                                └── Groups
+```
+
+---
+
+## 8. Grouping Space Configuration & Constraints
+
+### 8.1 Hard and Soft Constraints
+
+| Constraint | Type | Meaning |
+|---|---|---|
+| Group Size | Hard | Must contain between min and max members |
+| Required Majors | Hard / Soft | Minimum/maximum representation per major |
+| Required Roles | Hard | Specific roles that must be filled (e.g. Backend, UI/UX, Presenter) |
+| Required Skills | Soft | Skills needed in the team |
+| Role Limits | Soft | Max count for specific roles |
+| Diversity Rule | Soft | Max count from the same major |
+| Schedule Rule | Soft | At least one common meeting slot per week |
+| Commitment Rule | Soft | Prefer compatible commitment levels |
+
+---
+
+## 9. Team DNA Profile & Privacy
+
+### Information Included
+- Identity: Full Name, Student ID, Campus, Major.
+- Competencies: Skills & Proficiency (1-5), Preferred Roles, Project Experiences.
+- Availability: Weekly availability grid (15-min slots).
+- Preferences: Commitment level (Low, Medium, High), Work style, Portfolio link, Interests.
+
+### Privacy Rules
+- GPA, gender, religion, health, financial status, and private contact info are **excluded by default**.
+- Roster-level details visible only to assigned lecturers.
+- Public profile shown to peers is anonymized/trimmed (no private email or phone).
+
+---
+
+## 10. Group Formation Modes
+
+1. **Lecturer-Led Grouping**: Lecturer sets rules -> AI matches -> Lecturer reviews & publishes.
+2. **Student-Led Grouping**: Students form teams, send invites/applications -> Lecturer reviews & approves.
+3. **Hybrid Grouping (Flagship)**: Students self-form until deadline -> AI fills remaining gaps & unassigned students -> Lecturer reviews & publishes.
+
+---
+
+## 11. Matching and Recommendation Engine
+
+- **Explainable Matching**: Every recommendation contains human-readable rationale.
+- **Scoring Components**: Skill coverage, Role coverage, Major composition, Schedule compatibility, Commitment balance, Experience balance, Student preferences.
+
+---
+
+## 12. Team Health Score & Smart Rebalance
+
+### 12.1 Weekly Check-ins
+Students submit a weekly check-in covering:
+- Role/task currently handled.
+- Workload status (Low, Balanced, Overloaded).
+- Team collaboration quality rating.
+- Blocked status / support needed.
+- Optional lecturer support request.
+
+### 12.2 Risk Indicators & Status
+- **Green**: Healthy team.
+- **Yellow**: Group needs attention (e.g. slight workload imbalance).
+- **Red**: Group requires lecturer review (e.g. missing check-ins, member left, severe conflict).
+
+### 12.3 Smart Rebalance
+When a group loses a member, lacks a required role, or hits red-risk:
+1. Rebalance request opened.
+2. Missing role/skill selected.
+3. System ranks eligible ungrouped/looking-for-group candidates.
+4. Invitations/applications handled.
+5. Lecturer approves and updates composition.
+
+---
+
+## 13. Status Models
+
+### Grouping Space Status
+`Draft` -> `Open` -> `Frozen` -> `Matching` -> `Review` -> `Published` -> `Closed` / `Archived` (or `Cancelled`)
+
+### Group Status
+`Draft` / `Forming` -> `Incomplete` -> `Valid` -> `Pending Approval` / `Submitted` -> `Approved` -> `Published` -> `At Risk` -> `Closed` / `Dissolved`
+
+### Membership Status
+`Invited`, `Applied`, `Active`, `Leave Requested`, `Removal Requested`, `Withdrawn`, `Removed`, `Rejected`
+
+---
+
+## 14. Delivery Roadmap
+
+| Phase | Scope |
+|---|---|
+| P0 — MVP Foundation | Authentication, roles, academic structure, CSV import, grouping spaces, Team DNA |
+| P1 — Team Formation | Lecturer grouping, self-grouping, hybrid mode, invitations, join requests, matching explanation |
+| P2 — Team Health | Weekly check-ins, group-health status, risk alerts, lecturer intervention |
+| P3 — Smart Rebalance | Vacancies, replacement recommendations, membership-change workflow |
+| P4 — Integration & Scale | FAP/LMS integration, SSO, advanced analytics, multi-campus rollout |
