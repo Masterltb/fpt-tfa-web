@@ -1,0 +1,65 @@
+# Pack: tfa (Team Formation Assistant)
+name: tfa
+description: >
+  Team Formation Assistant — AI-assisted balanced team formation for FPT University.
+  Simulates FPT academic structure (Campus→Term→Course→ClassSection→GroupingSession→Teams).
+  Three roles: Student, Lecturer, Admin. Three grouping modes: Lecturer-led, Student-led, Hybrid.
+  Explainable matching with human-in-the-loop (lecturer approves). Student PII stays local.
+
+rbac: true
+roles:
+  - student
+  - lecturer
+  - admin
+
+toolchain:
+  backend: python
+  backend_framework: fastapi
+  frontend: react-typescript
+  frontend_ui: "shadcn-ui + tailwind-css-v4"
+  frontend_routing: react-router-v6
+  frontend_data: tanstack-query
+  package_manager: "uv (python) + npm (web)"
+  optimizer: or-tools
+  database: postgresql
+  migrations: alembic
+  auth: firebase-auth
+  containerization: docker-compose
+
+commands:
+  install: "uv sync && cd web && npm ci"
+  lint: "ruff check . && cd web && npm run lint"
+  typecheck: "mypy . && cd web && npm run typecheck"
+  test_unit: "pytest -q && cd web && npm test -- --run"
+  test_e2e: "npx playwright test"
+  build: "cd web && npm run build"
+  format_cmd: "ruff format"
+  run: "uvicorn app.api.main:app --reload"
+  db_migrate: "alembic upgrade head"
+  db_seed: "python scripts/seed.py"
+  docker_up: "docker-compose up -d"
+
+docs:
+  architecture: docs/architecture.md
+  domain: docs/domain.md
+  rbac: docs/rbac.md
+  api_contract: docs/api-contract.md
+  testing: docs/testing.md
+  constitution: docs/constitution.md
+  code_style: docs/code-style.md
+  team_dna: docs/team-dna.md
+  grouping_modes: docs/grouping-modes.md
+
+conventions:
+  - "Hard constraints (team size, must-pair, cannot-pair) are never violated by a suggestion."
+  - "Every team assignment is explainable — the optimizer emits a rationale per team."
+  - "Student personal data is private — access is per-role and per-ownership (see docs/rbac.md)."
+  - "The lecturer's override is final — AI suggests, a human decides the committed teams."
+  - "Formation runs are reproducible (same inputs + seed give same output) and logged."
+  - "Reuse OR-Tools / scipy before hand-rolling an optimizer (ponytail)."
+  - "Free-first: prefer completely-free third-party services and OSS libraries over rebuilding."
+  - "Privacy gate on reuse: student PII stays on OSS/self-hosted infra."
+  - "FPT academic structure: Campus → Term → Course → ClassSection → GroupingSession → Teams."
+  - "Team DNA is the branded name for a student's team formation profile."
+  - "Three grouping modes: Lecturer-led, Student-led, Hybrid. Hybrid is the flagship mode."
+  - "Admin manages structure and data; Lecturer owns grouping process; AI recommends, never decides."

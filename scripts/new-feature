@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Usage: ./scripts/new-feature <feature-name>
+# Example: ./scripts/new-feature student-survey
+
+if [ -z "$1" ]; then
+  echo "Usage: ./scripts/new-feature <feature-name>"
+  exit 1
+fi
+
+FEATURE_NAME=$1
+NEXT_NUM=$(ls -d specs/[0-9]* 2>/dev/null | wc -l | awk '{printf "%03d", $1+1}')
+SPEC_DIR="specs/${NEXT_NUM}-${FEATURE_NAME}"
+
+mkdir -p "$SPEC_DIR"
+cat << EOF > "$SPEC_DIR/spec.md"
+# Feature Spec: ${FEATURE_NAME}
+
+## Summary
+Brief description of feature ${FEATURE_NAME}.
+
+## Requirements
+- [ ] Requirement 1
+- [ ] Requirement 2
+
+## UI / Components
+- Component design & state changes
+
+## Verification Plan
+- Unit tests
+- E2E tests
+EOF
+
+echo "Created feature spec template at: ${SPEC_DIR}/spec.md"

@@ -1,0 +1,45 @@
+[project]
+name = "team-formation-assistant"
+version = "0.2.0"
+description = "AI-assisted balanced team formation for FPT University. Simulates FPT academic structure with explainable matching and human-in-the-loop."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+    "pydantic>=2.7",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg2-binary>=2.9",
+    # Real optimizer (free, OSS, runs locally — reuse over rebuild). Mock engine needs none.
+    "ortools>=9.10",
+    "firebase-admin>=7.5.0",
+    # CSV/Excel import
+    "openpyxl>=3.1",
+    "python-multipart>=0.0.9",
+    # CORS
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "httpx>=0.27",  # for FastAPI TestClient
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# NOTE: the domain + matching core is pure stdlib and is verified with
+#   python -m unittest discover -s tests
+# without installing anything. FastAPI/OR-Tools are needed only for the API and the real
+# optimizer: install with `uv sync` or `pip install -e .[dev]`.

@@ -1,0 +1,5 @@
+{
+  "id": "006-pairing-constraints",
+  "title": "Student Pairing Constraints",
+  "description": "Allow students to submit must_pair and cannot_pair constraints, and lecturers to review/approve them before AI matching."
+}

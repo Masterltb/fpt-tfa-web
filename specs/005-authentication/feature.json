@@ -1,0 +1,5 @@
+{
+  "id": "005-authentication",
+  "title": "Authentication Integration",
+  "description": "Implement authentication to replace hardcoded users, securing the API and identifying students and lecturers securely."
+}

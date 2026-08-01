@@ -1,0 +1,35 @@
+__pycache__/
+*.pyc
+.venv/
+web/node_modules/
+web/dist/
+.forge/harness/
+tfa.db
+service-account.json
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+pgdata/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Build
+*.egg-info/
+dist/
+build/
