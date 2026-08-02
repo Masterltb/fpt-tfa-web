@@ -21,8 +21,20 @@ router = APIRouter(prefix="/api/v1/students/me", tags=["Student DNA & Dashboard"
 # ---------------------------------------------------------------------------
 
 class SkillEntryPayload(BaseModel):
-    name: str
-    proficiency: int = Field(ge=1, le=5)
+    name: str = ""
+    proficiency: int = 3
+    skillId: str = ""
+    skillName: str = ""
+    level: int = 3
+    category: str = ""
+
+    def get_name(self) -> str:
+        return self.name or self.skillName or self.skillId or "Skill"
+
+    def get_proficiency(self) -> int:
+        if self.proficiency and self.proficiency != 3:
+            return self.proficiency
+        return self.level or self.proficiency or 3
 
 
 class AvailabilityPayload(BaseModel):
@@ -30,24 +42,29 @@ class AvailabilityPayload(BaseModel):
 
 
 class ExperiencePayload(BaseModel):
-    project_name: str
+    project_name: str = ""
     role: str = ""
     description: str = ""
     duration_months: int = 0
 
 
 class TeamDNAProfilePayload(BaseModel):
-    class_section_id: str = "sec-se1701"
+    class_section_id: str = "sec_se1801_swe201c"
     skills: list[SkillEntryPayload] = Field(default_factory=list)
     preferred_roles: list[str] = Field(default_factory=list)
+    preferredRoles: list[str] = Field(default_factory=list)
     experiences: list[ExperiencePayload] = Field(default_factory=list)
     experience_years: float = 0.0
     availability: list[str] = Field(default_factory=list)
+    availableTimeSlots: list[str] = Field(default_factory=list)
     interests: list[str] = Field(default_factory=list)
     commitment_level: CommitmentLevel = CommitmentLevel.MEDIUM
+    commitmentLevel: CommitmentLevel = CommitmentLevel.MEDIUM
     working_preferences: dict[str, str] = Field(default_factory=dict)
     portfolio_url: str = ""
     preferred_team_size: int = 4
+    targetGrade: str = ""
+    completenessScore: int = 0
 
 
 _student_dnas: dict[str, dict[str, Any]] = {}
@@ -161,22 +178,33 @@ async def update_team_profile(
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_student)
 ) -> dict[str, Any]:
+    roles = payload.preferred_roles or payload.preferredRoles
+    avail = payload.availability or payload.availableTimeSlots
+    commitment = payload.commitment_level if payload.commitment_level != CommitmentLevel.MEDIUM else payload.commitmentLevel
+
+    formatted_skills = [
+        {"name": s.get_name(), "proficiency": s.get_proficiency()}
+        for s in payload.skills
+    ]
+
     checks = [
         bool(payload.skills),
-        bool(payload.preferred_roles),
+        bool(roles),
         bool(payload.experiences) or payload.experience_years > 0,
-        bool(payload.availability),
+        bool(avail),
         bool(payload.interests),
-        payload.commitment_level != CommitmentLevel.MEDIUM or bool(payload.working_preferences),
+        commitment != CommitmentLevel.MEDIUM or bool(payload.working_preferences),
         bool(payload.working_preferences),
     ]
     weights = [20, 15, 15, 15, 10, 10, 15]
     completion = sum(w for c, w in zip(checks, weights) if c)
+    if payload.completenessScore:
+        completion = max(completion, payload.completenessScore)
 
     row = db.query(TeamDNARow).filter(TeamDNARow.student_id == principal.user_id).first()
-    skills_json_str = json.dumps([s.model_dump() for s in payload.skills])
-    roles_json_str = json.dumps(payload.preferred_roles)
-    avail_json_str = json.dumps(payload.availability)
+    skills_json_str = json.dumps(formatted_skills)
+    roles_json_str = json.dumps(roles)
+    avail_json_str = json.dumps(avail)
     interests_json_str = json.dumps(payload.interests)
 
     if row:
@@ -184,7 +212,7 @@ async def update_team_profile(
         row.preferred_roles_json = roles_json_str
         row.availability_json = avail_json_str
         row.interests_json = interests_json_str
-        row.commitment_level = payload.commitment_level
+        row.commitment_level = commitment
         row.completion_percentage = completion
     else:
         row = TeamDNARow(
@@ -195,7 +223,7 @@ async def update_team_profile(
             preferred_roles_json=roles_json_str,
             availability_json=avail_json_str,
             interests_json=interests_json_str,
-            commitment_level=payload.commitment_level,
+            commitment_level=commitment,
             completion_percentage=completion
         )
         db.add(row)
