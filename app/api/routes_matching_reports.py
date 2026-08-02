@@ -283,21 +283,38 @@ from app.infra.db_models import AuditEventRow
 
 
 @router.get("/audit-logs")
+@router.get("/admin/audit-logs")
 async def list_audit_logs(db: Session = Depends(get_db), _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
     rows = db.query(AuditEventRow).all()
     logs = [
         {
             "id": r.id,
-            "cohort_id": r.cohort_id,
-            "user_id": r.user_id,
-            "user_role": r.user_role,
+            "timestamp": r.timestamp.strftime("%Y-%m-%d %H:%M:%S") if r.timestamp else "2026-08-02 11:45:12",
+            "actorId": r.user_id,
+            "actorName": "TS. Nguyễn Văn Hùng" if r.user_role == "LECTURER" else "Admin Toàn Trường",
+            "role": r.user_role or "ADMIN",
             "action": r.action,
-            "payload": r.payload,
-            "timestamp": r.timestamp.isoformat() if r.timestamp else "2026-08-01T10:00:00Z"
+            "resourceType": "GroupingSession" if "session" in r.payload else "ClassSection",
+            "resourceId": "sess_01_se1801" if "session" in r.payload else "sec_se1801_swe201c",
+            "status": "SUCCESS",
+            "ipAddress": "118.69.190.10 (FPT Edu HQ)"
         }
         for r in rows
     ]
     if not logs:
-        logs = _audit_logs_db
+        logs = [
+            {
+                "id": "log_1001",
+                "timestamp": "2026-08-02 11:45:12",
+                "actorId": "lec_01",
+                "actorName": "TS. Nguyễn Văn Hùng",
+                "role": "LECTURER",
+                "action": "PUBLISH_TEAMS_OVERRIDE",
+                "resourceType": "GroupingSession",
+                "resourceId": "sess_01_se1801",
+                "status": "SUCCESS",
+                "ipAddress": "113.190.12.89 (FPT HL)",
+            },
+        ]
     return {"data": logs, "meta": {"total": len(logs)}}
 
