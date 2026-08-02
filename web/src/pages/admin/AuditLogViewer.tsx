@@ -131,7 +131,7 @@ export function AuditLogViewer() {
               </div>
               <h2 className="text-xl font-bold text-slate-900">Nhật Ký Kiểm Toán & Truy Cập RBAC</h2>
               <p className="text-xs text-slate-500">
-                Ghi nhận 100% các hành động liên quan đến cấu hình hiến pháp, chạy CP-SAT và Override nhóm theo <strong>docs/rbac.md</strong>.
+                Ghi nhận 100% các hành động liên quan đến cấu hình quy tắc ràng buộc, chạy CP-SAT và Override nhóm theo <strong>docs/rbac.md</strong>.
               </p>
             </div>
 

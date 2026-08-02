@@ -51,10 +51,10 @@ export function ConstitutionGuardrailEditor() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold mb-1">
-                <ShieldCheck size={14} /> FPT TFA Constitution Guardrail Engine
+                <ShieldCheck size={14} /> FPT TFA Grouping Rules & Guardrails Engine
               </div>
               <h2 className="text-xl font-black text-slate-900">
-                Cấu Hình Luật Hiến Pháp Bất Biến (docs/constitution.md)
+                Cấu Hình Quy Tắc Ràng Buộc Bắt Buộc (docs/constitution.md)
               </h2>
               <p className="text-xs text-slate-500">
                 Các quy định tại đây là <strong>Hard Constraints</strong> được bộ giải OR-Tools CP-SAT thi hành tuyệt đối cho toàn bộ các cơ sở FPT.
@@ -85,7 +85,7 @@ export function ConstitutionGuardrailEditor() {
                   <h3 className="text-sm font-black text-slate-900">1. Quy Mô Nhóm Chuẩn (Team Size Boundaries)</h3>
                   <p className="text-xs text-slate-500">Quy định số thành viên tối thiểu và tối đa cho mỗi nhóm môn học.</p>
                 </div>
-                <span className="text-xs font-bold text-slate-700">Hiến pháp hiện tại: 4 - 6 người</span>
+                <span className="text-xs font-bold text-slate-700">Quy định hiện tại: 4 - 6 người</span>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-4 pt-2">
@@ -171,13 +171,13 @@ export function ConstitutionGuardrailEditor() {
             {saveSuccess && (
               <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-emerald-600" />
-                Đã lưu & khóa cứng các quy định hiến pháp cho toàn bộ hệ thống FPT TFA!
+                Đã lưu & khóa cứng các quy tắc ràng buộc cho toàn bộ hệ thống FPT TFA!
               </div>
             )}
 
             {mutation.isError && (
               <ErrorAlert
-                title="Không thể cập nhật luật hiến pháp"
+                title="Không thể cập nhật quy tắc ràng buộc"
                 detail={(mutation.error as any)?.detail || 'Lỗi kết nối hoặc quyền Admin chưa đủ.'}
                 onRetry={handleSave}
               />
@@ -189,7 +189,7 @@ export function ConstitutionGuardrailEditor() {
                 disabled={mutation.isPending}
                 className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition flex items-center gap-2"
               >
-                <Save size={16} /> {mutation.isPending ? 'Đang lưu...' : 'Lưu & Khóa Cứng Luật Hiến Pháp'}
+                <Save size={16} /> {mutation.isPending ? 'Đang lưu...' : 'Lưu & Khóa Cứng Quy Tắc Ràng Buộc'}
               </button>
             </div>
           </div>

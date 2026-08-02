@@ -137,7 +137,7 @@ export function ClassSectionWorkspace() {
                       <span className="text-[10px] uppercase font-bold text-slate-400">Quy Mô Nhóm (Team Size)</span>
                       <p className="text-sm font-bold text-slate-900">4 - 6 Thành viên / Nhóm</p>
                       <p className="text-xs text-slate-600">
-                        Hiến pháp cấm mọi thao tác phá vỡ giới hạn này mà không có chấp thuận từ Giảng viên.
+                        Quy định hệ thống cấm mọi thao tác phá vỡ giới hạn này mà không có chấp thuận từ Giảng viên.
                       </p>
                     </div>
                   </div>

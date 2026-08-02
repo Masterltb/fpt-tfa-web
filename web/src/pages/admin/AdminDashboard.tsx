@@ -160,14 +160,14 @@ export function AdminDashboard() {
                   <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition">
                     <ShieldCheck size={24} />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900">Thi Hành Hiến Pháp (Constitution Editor)</h3>
+                  <h3 className="text-lg font-bold text-slate-900">Quy Tắc Ràng Buộc & Tiêu Chuẩn Ghép Nhóm</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Cấu hình ràng buộc bất biến toàn trường per <strong>docs/constitution.md</strong>: Giới hạn 4-6 người, cấm tín hiệu nhạy cảm & No Student Left Behind.
+                    Cấu hình quy định ghép nhóm bắt buộc toàn trường: Giới hạn 4-6 người, bảo mật dữ liệu nhạy cảm & Không bỏ lại sinh viên nào.
                   </p>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 text-xs font-bold text-orange-600">
-                  <span>Cấu Hình Luật Hiến Pháp</span>
+                  <span>Cấu Hình Quy Tắc Ràng Buộc</span>
                   <span>→</span>
                 </div>
               </Link>

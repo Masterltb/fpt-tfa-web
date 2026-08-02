@@ -91,7 +91,7 @@ export function DragDropOverrideStudio() {
       status: 'VALID',
       balanceScore: 89,
       explainabilityRationale: [
-        'Đáp ứng quy mô chuẩn 5 thành viên theo hiến pháp FPT University.',
+        'Đáp ứng quy mô chuẩn 5 thành viên theo quy định FPT University.',
         'Độ phủ vai trò đạt 100%: Có đủ Frontend, Backend và Tester/QA.',
         'Đồng nhất mức độ cam kết thời gian cao (>15h/tuần).',
       ],
@@ -365,7 +365,7 @@ export function DragDropOverrideStudio() {
                     </span>
                     <ul className="space-y-1 text-xs text-orange-800/90 list-disc pl-4 leading-relaxed">
                       {(team.explainabilityRationale || [
-                        'Nhóm thỏa mãn ràng buộc hiến pháp FPT.',
+                        'Nhóm thỏa mãn ràng buộc quy định FPT.',
                         'Kỹ năng bổ trợ cân bằng cao.',
                       ]).map((r: string, idx: number) => (
                         <li key={idx}>{r}</li>

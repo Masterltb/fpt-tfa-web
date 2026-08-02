@@ -79,7 +79,7 @@ export function SessionBuilderWizard() {
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold mb-1">
                 <Sparkles size={14} /> Wizard Khởi Tạo Phiên Ghép Nhóm
               </div>
-              <h2 className="text-xl font-bold text-slate-900">Cấu Hình Hiến Pháp & Thuật Toán CP-SAT</h2>
+              <h2 className="text-xl font-bold text-slate-900">Cấu Hình Quy Định & Thuật Toán CP-SAT</h2>
               <p className="text-xs text-slate-500">
                 Tuân thủ quy định tại <strong>docs/constitution.md</strong>: Giảng viên chịu trách nhiệm kiểm soát quy mô và ràng buộc môn học.
               </p>
@@ -123,7 +123,7 @@ export function SessionBuilderWizard() {
                     {
                       id: 'STUDENT_LED',
                       title: 'SV Tự Chọn (100% Student)',
-                      desc: 'Sinh viên tự lập nhóm và gửi duyệt; GV chỉ duyệt nhóm đạt chuẩn quy mô theo hiến pháp.',
+                      desc: 'Sinh viên tự lập nhóm và gửi duyệt; GV chỉ duyệt nhóm đạt chuẩn quy mô theo quy định.',
                     },
                   ].map((m) => (
                     <button
@@ -155,7 +155,7 @@ export function SessionBuilderWizard() {
           {activeStep === 2 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Quy Mô Nhóm theo Hiến Pháp (docs/constitution.md)</h3>
+                <h3 className="text-sm font-bold text-slate-900">Quy Mô Nhóm theo Quy Định (docs/constitution.md)</h3>
                 <p className="text-xs text-slate-500">
                   Ràng buộc cứng: AI CP-SAT sẽ từ chối nghiệm nếu không thỏa mãn số lượng tối thiểu/tối đa.
                 </p>
@@ -199,7 +199,7 @@ export function SessionBuilderWizard() {
               <div className="p-4 rounded-xl bg-cyan-50 border border-cyan-200 text-cyan-900 text-xs flex items-center gap-3">
                 <ShieldCheck size={20} className="text-cyan-600 shrink-0" />
                 <span>
-                  <strong>Kiểm chứng Hiến pháp:</strong> Quy mô 4 - 6 thành viên hoàn toàn hợp lệ cho môn học {selectedSectionCode}.
+                  <strong>Kiểm chứng quy định:</strong> Quy mô 4 - 6 thành viên hoàn toàn hợp lệ cho môn học {selectedSectionCode}.
                 </span>
               </div>
             </div>
