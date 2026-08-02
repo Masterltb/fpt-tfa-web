@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from pydantic import BaseModel
 
-from app.api.deps import Principal, require_admin, require_student
+from app.api.deps import Principal, require_admin, require_student, require_lecturer
 from app.services.csv_importer import parse_csv_roster
 
 router = APIRouter(prefix="/api/v1", tags=["Academic Catalogs & Sections"])
@@ -149,6 +149,62 @@ async def create_skill(payload: SkillCatalogPayload, _admin: Principal = Depends
 @router.get("/sections")
 async def list_sections() -> dict[str, Any]:
     return {"data": _sections_db}
+
+
+@router.get("/lecturers/me/sections")
+async def list_my_lecturer_sections(principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    sections = [
+        {
+            "id": "sec_se1801_swe201c",
+            "sectionCode": "SE1801",
+            "courseCode": "SWE201c",
+            "courseName": "Introduction to Software Engineering",
+            "termId": "term_fall2026",
+            "lecturerId": principal.user_id,
+            "lecturerName": "TS. Nguyễn Văn Hùng",
+            "studentCount": 36,
+            "dnaCompletionRate": 92,
+            "activeSessionId": "sess_01_se1801",
+            "activeSessionStatus": "REVIEW",
+            "activeGroupingMode": "HYBRID",
+        },
+        {
+            "id": "sec_se1802_prj301",
+            "sectionCode": "SE1802",
+            "courseCode": "PRJ301",
+            "courseName": "Java Web Application Development",
+            "termId": "term_fall2026",
+            "lecturerId": principal.user_id,
+            "lecturerName": "TS. Nguyễn Văn Hùng",
+            "studentCount": 32,
+            "dnaCompletionRate": 88,
+            "activeSessionId": "sess_02_se1802",
+            "activeSessionStatus": "OPEN",
+            "activeGroupingMode": "LECTURER_LED",
+        },
+    ]
+    return {"data": sections}
+
+
+@router.get("/students/me/sections")
+async def list_my_student_sections(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    sections = [
+        {
+            "id": "sec_se1801_swe201c",
+            "sectionCode": "SE1801",
+            "courseCode": "SWE201c",
+            "courseName": "Introduction to Software Engineering",
+            "termId": "term_fall2026",
+            "lecturerId": "lec_01",
+            "lecturerName": "TS. Nguyễn Văn Hùng",
+            "studentCount": 36,
+            "dnaCompletionRate": 92,
+            "activeSessionId": "sess_01_se1801",
+            "activeSessionStatus": "OPEN",
+            "activeGroupingMode": "HYBRID",
+        },
+    ]
+    return {"data": sections}
 
 
 @router.get("/sections/{section_id}/students")

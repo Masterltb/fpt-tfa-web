@@ -101,6 +101,21 @@ _class_sections: list[dict[str, Any]] = [
 # Campus Endpoints
 # ---------------------------------------------------------------------------
 
+@router.get("/system/overview")
+async def get_system_overview(_admin=Depends(require_admin)) -> dict[str, Any]:
+    return {
+        "activeTerm": "Fall 2026",
+        "campusCount": 5,
+        "courseCount": 24,
+        "sectionCount": 148,
+        "studentCount": 4850,
+        "lecturerCount": 180,
+        "activeGroupingSessions": 34,
+        "cpSatSolverVersion": "Google OR-Tools v9.8.3296",
+        "dbStatus": "HEALTHY",
+    }
+
+
 @router.get("/campuses", response_model=list[CampusResponse])
 async def list_campuses(_admin=Depends(require_admin)) -> list[dict[str, Any]]:
     return _campuses
