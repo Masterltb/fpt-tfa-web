@@ -151,71 +151,116 @@ async def list_sections() -> dict[str, Any]:
     return {"data": _sections_db}
 
 
+from sqlalchemy.orm import Session
+from app.infra.database import get_db
+from app.infra.db_models import ClassSectionRow, CourseRow, GroupingSessionRow
+
+
 @router.get("/lecturers/me/sections")
-async def list_my_lecturer_sections(principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
-    sections = [
-        {
-            "id": "sec_se1801_swe201c",
-            "sectionCode": "SE1801",
-            "courseCode": "SWE201c",
-            "courseName": "Introduction to Software Engineering",
-            "termId": "term_fall2026",
+async def list_my_lecturer_sections(db: Session = Depends(get_db), principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    rows = db.query(ClassSectionRow).all()
+    sections = []
+    for sec in rows:
+        crs = db.query(CourseRow).filter(CourseRow.id == sec.course_id).first()
+        gs = db.query(GroupingSessionRow).filter(GroupingSessionRow.class_section_id == sec.id).first()
+        sections.append({
+            "id": sec.id,
+            "sectionCode": sec.code,
+            "courseCode": crs.code if crs else "SWE201c",
+            "courseName": crs.name if crs else sec.name,
+            "termId": sec.term_id,
             "lecturerId": principal.user_id,
             "lecturerName": "TS. Nguyễn Văn Hùng",
-            "studentCount": 36,
+            "studentCount": sec.capacity,
             "dnaCompletionRate": 92,
-            "activeSessionId": "sess_01_se1801",
-            "activeSessionStatus": "REVIEW",
-            "activeGroupingMode": "HYBRID",
-        },
-        {
-            "id": "sec_se1802_prj301",
-            "sectionCode": "SE1802",
-            "courseCode": "PRJ301",
-            "courseName": "Java Web Application Development",
-            "termId": "term_fall2026",
-            "lecturerId": principal.user_id,
-            "lecturerName": "TS. Nguyễn Văn Hùng",
-            "studentCount": 32,
-            "dnaCompletionRate": 88,
-            "activeSessionId": "sess_02_se1802",
-            "activeSessionStatus": "OPEN",
-            "activeGroupingMode": "LECTURER_LED",
-        },
-        {
-            "id": "sec_se1803_swp391",
-            "sectionCode": "SE1803",
-            "courseCode": "SWP391",
-            "courseName": "Application Development Project",
-            "termId": "term_fall2026",
-            "lecturerId": principal.user_id,
-            "lecturerName": "TS. Nguyễn Văn Hùng",
-            "studentCount": 40,
-            "dnaCompletionRate": 75,
-            "activeSessionStatus": "DRAFT",
-        },
-    ]
+            "activeSessionId": gs.id if gs else None,
+            "activeSessionStatus": gs.status.value if gs else "DRAFT",
+            "activeGroupingMode": gs.mode.value if gs else "HYBRID",
+        })
+    if not sections:
+        sections = [
+            {
+                "id": "sec_se1801_swe201c",
+                "sectionCode": "SE1801",
+                "courseCode": "SWE201c",
+                "courseName": "Introduction to Software Engineering",
+                "termId": "term_fall2026",
+                "lecturerId": principal.user_id,
+                "lecturerName": "TS. Nguyễn Văn Hùng",
+                "studentCount": 36,
+                "dnaCompletionRate": 92,
+                "activeSessionId": "sess_01_se1801",
+                "activeSessionStatus": "REVIEW",
+                "activeGroupingMode": "HYBRID",
+            },
+            {
+                "id": "sec_se1802_prj301",
+                "sectionCode": "SE1802",
+                "courseCode": "PRJ301",
+                "courseName": "Java Web Application Development",
+                "termId": "term_fall2026",
+                "lecturerId": principal.user_id,
+                "lecturerName": "TS. Nguyễn Văn Hùng",
+                "studentCount": 32,
+                "dnaCompletionRate": 88,
+                "activeSessionId": "sess_02_se1802",
+                "activeSessionStatus": "OPEN",
+                "activeGroupingMode": "LECTURER_LED",
+            },
+            {
+                "id": "sec_se1803_swp391",
+                "sectionCode": "SE1803",
+                "courseCode": "SWP391",
+                "courseName": "Application Development Project",
+                "termId": "term_fall2026",
+                "lecturerId": principal.user_id,
+                "lecturerName": "TS. Nguyễn Văn Hùng",
+                "studentCount": 40,
+                "dnaCompletionRate": 75,
+                "activeSessionStatus": "DRAFT",
+            },
+        ]
     return {"data": sections}
 
 
 @router.get("/students/me/sections")
-async def list_my_student_sections(principal: Principal = Depends(require_student)) -> dict[str, Any]:
-    sections = [
-        {
-            "id": "sec_se1801_swe201c",
-            "sectionCode": "SE1801",
-            "courseCode": "SWE201c",
-            "courseName": "Introduction to Software Engineering",
-            "termId": "term_fall2026",
-            "lecturerId": "lec_01",
+async def list_my_student_sections(db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    rows = db.query(ClassSectionRow).all()
+    sections = []
+    for sec in rows:
+        crs = db.query(CourseRow).filter(CourseRow.id == sec.course_id).first()
+        gs = db.query(GroupingSessionRow).filter(GroupingSessionRow.class_section_id == sec.id).first()
+        sections.append({
+            "id": sec.id,
+            "sectionCode": sec.code,
+            "courseCode": crs.code if crs else "SWE201c",
+            "courseName": crs.name if crs else sec.name,
+            "termId": sec.term_id,
+            "lecturerId": sec.lecturer_id,
             "lecturerName": "TS. Nguyễn Văn Hùng",
-            "studentCount": 36,
+            "studentCount": sec.capacity,
             "dnaCompletionRate": 92,
-            "activeSessionId": "sess_01_se1801",
-            "activeSessionStatus": "OPEN",
-            "activeGroupingMode": "HYBRID",
-        },
-    ]
+            "activeSessionId": gs.id if gs else "sess_01_se1801",
+            "activeSessionStatus": gs.status.value if gs else "OPEN",
+            "activeGroupingMode": gs.mode.value if gs else "HYBRID",
+        })
+    if not sections:
+        sections = [
+            {
+                "id": "sec_se1801_swe201c",
+                "sectionCode": "SE1801",
+                "courseCode": "SWE201c",
+                "courseName": "Introduction to Software Engineering",
+                "termId": "term_fall2026",
+                "lecturerId": "lec_01",
+                "lecturerName": "TS. Nguyễn Văn Hùng",
+                "studentCount": 36,
+                "dnaCompletionRate": 92,
+                "activeSessionId": "sess_01_se1801",
+                "activeSessionStatus": "OPEN",
+                "activeGroupingMode": "HYBRID",
+            },
+        ]
     return {"data": sections}
 
 

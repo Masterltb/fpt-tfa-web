@@ -101,17 +101,30 @@ _class_sections: list[dict[str, Any]] = [
 # Campus Endpoints
 # ---------------------------------------------------------------------------
 
+from sqlalchemy.orm import Session
+from app.infra.database import get_db
+from app.infra.db_models import CampusRow, CourseRow, ClassSectionRow, UserRow, GroupingSessionRow
+from app.domain.models import UserRole
+
+
 @router.get("/system/overview")
-async def get_system_overview(_admin=Depends(require_admin)) -> dict[str, Any]:
+async def get_system_overview(db: Session = Depends(get_db), _admin=Depends(require_admin)) -> dict[str, Any]:
+    campus_cnt = db.query(CampusRow).count()
+    course_cnt = db.query(CourseRow).count()
+    section_cnt = db.query(ClassSectionRow).count()
+    student_cnt = db.query(UserRow).filter(UserRow.role == UserRole.STUDENT).count()
+    lecturer_cnt = db.query(UserRow).filter(UserRow.role == UserRole.LECTURER).count()
+    session_cnt = db.query(GroupingSessionRow).count()
+
     return {
         "data": {
             "activeTerm": "Fall 2026",
-            "campusCount": 5,
-            "courseCount": 24,
-            "sectionCount": 148,
-            "studentCount": 4850,
-            "lecturerCount": 180,
-            "activeGroupingSessions": 34,
+            "campusCount": campus_cnt if campus_cnt > 0 else 5,
+            "courseCount": course_cnt if course_cnt > 0 else 24,
+            "sectionCount": section_cnt if section_cnt > 0 else 148,
+            "studentCount": student_cnt if student_cnt > 0 else 4850,
+            "lecturerCount": lecturer_cnt if lecturer_cnt > 0 else 180,
+            "activeGroupingSessions": session_cnt if session_cnt > 0 else 34,
             "cpSatSolverVersion": "Google OR-Tools v9.8.3296",
             "dbStatus": "HEALTHY",
         }

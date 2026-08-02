@@ -255,3 +255,15 @@ class JoinRequestRow(Base):
     status: Mapped[JoinRequestStatus] = mapped_column(SQLEnum(JoinRequestStatus), default=JoinRequestStatus.PENDING)
     message: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AuditEventRow(Base):
+    __tablename__ = "audit_events"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    cohort_id: Mapped[str] = mapped_column(String, default="", index=True)
+    user_id: Mapped[str] = mapped_column(String, default="", index=True)
+    user_role: Mapped[str] = mapped_column(String, default="ADMIN")
+    action: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    payload: Mapped[str] = mapped_column(Text, default="{}")
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

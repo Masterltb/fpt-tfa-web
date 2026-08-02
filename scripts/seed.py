@@ -16,14 +16,18 @@ import random
 import json
 from datetime import datetime
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.infra.database import engine, SessionLocal, Base
 from app.infra.db_models import (
     UserRow, CampusRow, TermRow, CourseRow, MajorRow, ProgramRow, ClassSectionRow,
-    GroupingSessionRow, TeamDNARow, TeamRow, TeamMemberRow
+    GroupingSessionRow, TeamDNARow, TeamRow, TeamMemberRow, AuditEventRow
 )
-from app.domain.models import UserRole, UserStatus, GroupingMode, GroupingSessionStatus, CommitmentLevel
+from app.domain.models import UserRole, UserStatus, GroupingMode, GroupingSessionStatus, CommitmentLevel, TeamStatus
 
 
 def seed() -> None:
@@ -33,6 +37,7 @@ def seed() -> None:
 
     with SessionLocal() as session:
         # Clear existing rows
+        session.query(AuditEventRow).delete()
         session.query(TeamMemberRow).delete()
         session.query(TeamRow).delete()
         session.query(TeamDNARow).delete()
@@ -46,12 +51,13 @@ def seed() -> None:
         session.query(UserRow).delete()
         session.commit()
 
-        # 1. Seed Campuses
-        hcm = CampusRow(id="camp-hcm", code="HCM", name="FPT Campus TP.HCM", is_active=True)
-        hn = CampusRow(id="camp-hn", code="HN", name="FPT Campus Ha Noi", is_active=True)
-        dn = CampusRow(id="camp-dn", code="DN", name="FPT Campus Da Nang", is_active=True)
-        ct = CampusRow(id="camp-ct", code="CT", name="FPT Campus Can Tho", is_active=True)
-        session.add_all([hcm, hn, dn, ct])
+        # 1. Seed 5 Campuses
+        c1 = CampusRow(id="camp-hcm", code="HCM", name="FPT Campus TP.HCM", is_active=True)
+        c2 = CampusRow(id="camp-hn", code="HN", name="FPT Campus Hà Nội", is_active=True)
+        c3 = CampusRow(id="camp-dn", code="DN", name="FPT Campus Đà Nẵng", is_active=True)
+        c4 = CampusRow(id="camp-ct", code="CT", name="FPT Campus Cần Thơ", is_active=True)
+        c5 = CampusRow(id="camp-qn", code="QN", name="FPT Campus Quy Nhơn", is_active=True)
+        session.add_all([c1, c2, c3, c4, c5])
         session.commit()
 
         # 2. Seed Academic Programs (Faculties)
@@ -64,18 +70,14 @@ def seed() -> None:
 
         # 3. Seed Majors across ALL Faculties
         majors_list = [
-            # IT & AI
             MajorRow(id="maj-se", code="SE", name="Kỹ Thuật Phần Mềm (Software Engineering)", program_id="prog-it", campus_id="camp-hcm"),
-            MajorRow(id="maj-ia", code="IA", name="An Thống Thông Tin (Information Assurance)", program_id="prog-it", campus_id="camp-hcm"),
+            MajorRow(id="maj-ia", code="IA", name="An Toàn Thông Tin (Information Assurance)", program_id="prog-it", campus_id="camp-hcm"),
             MajorRow(id="maj-ai", code="AI", name="Trí Tuệ Nhân Tạo (Artificial Intelligence)", program_id="prog-it", campus_id="camp-hcm"),
-            # Business & Marketing
             MajorRow(id="maj-ba", code="BA", name="Quản Trị Kinh Doanh (Business Administration)", program_id="prog-biz", campus_id="camp-hcm"),
             MajorRow(id="maj-dm", code="DM", name="Digital Marketing", program_id="prog-biz", campus_id="camp-hcm"),
             MajorRow(id="maj-ib", code="IB", name="Kinh Doanh Quốc Tế (International Business)", program_id="prog-biz", campus_id="camp-hcm"),
-            # Design & Media
             MajorRow(id="maj-gd", code="GD", name="Thiết Kế Đồ Họa (Graphic Design)", program_id="prog-des", campus_id="camp-hcm"),
             MajorRow(id="maj-mc", code="MC", name="Truyền Thông Đa Phương Tiện (Multimedia Communication)", program_id="prog-des", campus_id="camp-hcm"),
-            # Languages
             MajorRow(id="maj-eng", code="ENG", name="Ngôn Ngữ Anh (English Language)", program_id="prog-lang", campus_id="camp-hcm"),
             MajorRow(id="maj-jpn", code="JPN", name="Ngôn Ngữ Nhật (Japanese Language)", program_id="prog-lang", campus_id="camp-hcm"),
         ]
@@ -83,97 +85,83 @@ def seed() -> None:
         session.commit()
 
         # 4. Seed Terms
-        term = TermRow(id="term-fall26", campus_id="camp-hcm", academic_year_id="2026", name="Fall 2026", status="ACTIVE")
+        term = TermRow(id="term_fall2026", campus_id="camp-hcm", academic_year_id="2026", name="Fall 2026", status="ACTIVE")
         session.add(term)
         session.commit()
 
-        # 5. Seed Multi-disciplinary Courses
+        # 5. Seed Courses
         courses_list = [
-            # Interdisciplinary Capstone Course (ALL MAJORS)
-            CourseRow(id="crs-exe101", code="EXE101", name="Trải Nghiệm Khởi Nghiệp 1 (Experiential Entrepreneurship 1)", description="Môn học liên ngành bắt buộc kết hợp sinh viên IT, Kinh tế và Thiết kế."),
-            CourseRow(id="crs-exe201", code="EXE201", name="Trải Nghiệm Khởi Nghiệp 2 (Experiential Entrepreneurship 2)", description="Dự án khởi nghiệp thực chiến đa ngành."),
-            # IT Courses
-            CourseRow(id="crs-swp391", code="SWP391", name="Dự Án Phôi Phần Mềm (Software Development Project)", major_id="maj-se"),
-            CourseRow(id="crs-prn232", code="PRN232", name="C# & .NET Enterprise Applications", major_id="maj-se"),
-            # Business Courses
-            CourseRow(id="crs-mkt201", code="MKT201", name="Nguyên Lý Marketing (Marketing Principles)", major_id="maj-dm"),
-            CourseRow(id="crs-bus301", code="BUS301", name="Quản Trị Chiến Lược (Strategic Management)", major_id="maj-ba"),
-            # Design Courses
-            CourseRow(id="crs-des302", code="DES302", name="Thiết Kế UI/UX & Nhận Diện Thương Hiệu", major_id="maj-gd"),
+            CourseRow(id="crs-swe201c", code="SWE201c", name="Introduction to Software Engineering", description="Môn Kỹ thuật Phần mềm cơ bản"),
+            CourseRow(id="crs-prj301", code="PRJ301", name="Java Web Application Development", description="Lập trình Web Java"),
+            CourseRow(id="crs-swp391", code="SWP391", name="Application Development Project", major_id="maj-se"),
+            CourseRow(id="crs-exe101", code="EXE101", name="Experiential Entrepreneurship 1", description="Khởi nghiệp liên ngành"),
         ]
         session.add_all(courses_list)
         session.commit()
 
-        # 6. Seed Users (Admin & Lecturers)
-        admin = UserRow(
-            id="admin-001",
-            email="admin@fpt.edu.vn",
-            display_name="System Admin",
-            role=UserRole.ADMIN,
-            user_status=UserStatus.ACTIVE,
-            campus_id="camp-hcm"
-        )
-        lecturer_it = UserRow(
-            id="lec-001",
-            email="lecturer.it@fpt.edu.vn",
-            display_name="Dr. Le Van A (Khoa CNTT)",
-            role=UserRole.LECTURER,
-            user_status=UserStatus.ACTIVE,
-            campus_id="camp-hcm"
-        )
-        lecturer_biz = UserRow(
-            id="lec-002",
-            email="lecturer.biz@fpt.edu.vn",
-            display_name="ThS. Tran Thi B (Khoa QTKD)",
-            role=UserRole.LECTURER,
-            user_status=UserStatus.ACTIVE,
-            campus_id="camp-hcm"
-        )
-        session.add_all([admin, lecturer_it, lecturer_biz])
+        # 6. Seed Users (Admin, Lecturers, Default Dev Students)
+        admin = UserRow(id="adm_01", email="admin@fpt.edu.vn", display_name="Quản Trị Viên Hệ Thống", role=UserRole.ADMIN, user_status=UserStatus.ACTIVE, campus_id="camp-hcm")
+        lec1 = UserRow(id="lec_01", email="hungnv@fpt.edu.vn", display_name="TS. Nguyễn Văn Hùng", role=UserRole.LECTURER, user_status=UserStatus.ACTIVE, campus_id="camp-hcm")
+        stu_dev = UserRow(id="stu_01", email="student01.se@fpt.edu.vn", display_name="Nguyễn Văn A (Student)", role=UserRole.STUDENT, student_code="SE180001", user_status=UserStatus.ACTIVE, campus_id="camp-hcm")
+        session.add_all([admin, lec1, stu_dev])
         session.commit()
 
-        # 7. Seed Interdisciplinary Class Section (EXE101 Interdisciplinary Capstone)
-        sec_exe = ClassSectionRow(
-            id="sec-exe101-01",
-            term_id="term-fall26",
-            course_id="crs-exe101",
-            lecturer_id="lec-002",
-            code="EXE101_FALL26",
-            name="EXE101 - Lớp Dự Án Khởi Nghiệp Đa Ngành",
-            capacity=50,
-            status="ACTIVE",
-            campus_id="camp-hcm"
-        )
-        session.add(sec_exe)
+        # 7. Seed Class Sections
+        sec1 = ClassSectionRow(id="sec_se1801_swe201c", term_id="term_fall2026", course_id="crs-swe201c", lecturer_id="lec_01", code="SE1801", name="SE1801 — SWE201c", capacity=36, status="ACTIVE", campus_id="camp-hcm")
+        sec2 = ClassSectionRow(id="sec_se1802_prj301", term_id="term_fall2026", course_id="crs-prj301", lecturer_id="lec_01", code="SE1802", name="SE1802 — PRJ301", capacity=32, status="ACTIVE", campus_id="camp-hcm")
+        sec3 = ClassSectionRow(id="sec_se1803_swp391", term_id="term_fall2026", course_id="crs-swp391", lecturer_id="lec_01", code="SE1803", name="SE1803 — SWP391", capacity=40, status="ACTIVE", campus_id="camp-hcm")
+        session.add_all([sec1, sec2, sec3])
         session.commit()
 
-        # 8. Seed Interdisciplinary Grouping Session (Hybrid Mode with Cross-Major Teaming Rules)
-        gs_exe = GroupingSessionRow(
-            id="sess-exe101-cross",
-            class_section_id="sec-exe101-01",
-            name="Đợt Ghép Nhóm Khởi Nghiệp Đa Ngành EXE101",
+        # 8. Seed Grouping Sessions
+        gs1 = GroupingSessionRow(
+            id="sess_01_se1801",
+            class_section_id="sec_se1801_swe201c",
+            name="Phiên Ghép Nhóm SE1801 (SWE201c)",
             mode=GroupingMode.HYBRID,
             team_min_size=4,
-            team_max_size=5,
-            required_roles_json=json.dumps(["Leader/CEO", "Tech Lead (IT)", "Marketing Manager (Kinh Tế)", "UI/UX Designer (Thiết Kế)"]),
-            required_skills_json=json.dumps(["Python/React", "Digital Marketing", "Figma Design", "Financial Modeling"]),
-            required_majors_json=json.dumps(["SE", "DM", "GD", "BA"]),
-            allow_cross_major=True,
-            max_same_major_count=2,
-            weights_json=json.dumps({
-                "skillCoverage": 30.0,
-                "majorDiversity": 25.0,  # High weight on cross-major diversity!
-                "roleFit": 20.0,
-                "availability": 15.0,
-                "commitmentLevel": 10.0
-            }),
+            team_max_size=6,
+            required_roles_json=json.dumps(["Leader", "Frontend", "Backend", "QA/Tester"]),
+            required_skills_json=json.dumps(["React", "Node.js", "Python", "SQL"]),
             status=GroupingSessionStatus.OPEN,
             created_at=datetime.utcnow()
         )
-        session.add(gs_exe)
+        gs2 = GroupingSessionRow(
+            id="sess_02_se1802",
+            class_section_id="sec_se1802_prj301",
+            name="Phiên Ghép Nhóm SE1802 (PRJ301)",
+            mode=GroupingMode.LECTURER_LED,
+            team_min_size=4,
+            team_max_size=5,
+            status=GroupingSessionStatus.OPEN,
+            created_at=datetime.utcnow()
+        )
+        session.add_all([gs1, gs2])
         session.commit()
 
-        # 9. Seed 60 Students Across Multi-Disciplinary Majors
+        # 9. Seed Teams & Members
+        t1 = TeamRow(
+            id="team-01",
+            session_id="sess_01_se1801",
+            name="Nhóm 01 — SWE201c (Team Alpha)",
+            member_ids_json=json.dumps(["stu-001", "stu-002", "stu-003", "stu-004"]),
+            rationale="Tối ưu hóa trùng khớp kỹ năng Frontend/Backend và 95% lịch rảnh chung",
+            status=TeamStatus.APPROVED,
+            leader_id="stu-001"
+        )
+        t2 = TeamRow(
+            id="team-02",
+            session_id="sess_01_se1801",
+            name="Nhóm 02 — SWE201c (Team Beta)",
+            member_ids_json=json.dumps(["stu-005", "stu-006", "stu-007", "stu-008"]),
+            rationale="Cân bằng GPA và bổ sung thiết kế UI/UX",
+            status=TeamStatus.FORMING,
+            leader_id="stu-005"
+        )
+        session.add_all([t1, t2])
+        session.commit()
+
+        # 10. Seed 60 Students Across Multi-Disciplinary Majors with Team DNA
         majors_map = {
             "SE": ["Python", "React", "Node.js", "C#", "PostgreSQL", "Docker"],
             "DM": ["Digital Marketing", "SEO/SEM", "Content Strategy", "Social Media", "Google Analytics"],
@@ -185,8 +173,8 @@ def seed() -> None:
 
         roles_by_major = {
             "SE": ["Tech Lead (IT)", "Fullstack Developer", "QA Engineer"],
-            "DM": ["Marketing Manager (Kinh Tế)", "Growth Hacker"],
-            "GD": ["UI/UX Designer (Thiết Kế)", "Creative Director"],
+            "DM": ["Marketing Manager", "Growth Hacker"],
+            "GD": ["UI/UX Designer", "Creative Director"],
             "BA": ["Leader/CEO", "Financial Analyst"],
             "ENG": ["Communications Specialist"],
             "MC": ["Content Creator", "PR Manager"]
@@ -194,12 +182,14 @@ def seed() -> None:
 
         all_majors_list = list(majors_map.keys())
 
+        students_list = []
+        dnas_list = []
         for i in range(1, 61):
             s_id = f"stu-{i:03d}"
             major_code = all_majors_list[(i - 1) % len(all_majors_list)]
             code = f"{major_code}17{i:04d}"
             email = f"student{i}.{major_code.lower()}@fpt.edu.vn"
-            name = f"Nguyen Student {i} ({major_code})"
+            name = f"Nguyễn Văn Sinh Viên {i} ({major_code})"
 
             user_st = UserRow(
                 id=s_id,
@@ -210,9 +200,8 @@ def seed() -> None:
                 student_code=code,
                 campus_id="camp-hcm"
             )
-            session.add(user_st)
+            students_list.append(user_st)
 
-            # Generate realistic Team DNA per major
             major_skills = majors_map[major_code]
             selected_skills = [
                 {"name": sk, "proficiency": random.randint(3, 5)}
@@ -224,21 +213,31 @@ def seed() -> None:
             dna = TeamDNARow(
                 id=f"dna-{s_id}",
                 student_id=s_id,
-                class_section_id="sec-exe101-01",
+                class_section_id="sec_se1801_swe201c",
                 skills_json=json.dumps(selected_skills),
                 preferred_roles_json=json.dumps(pref_roles),
                 experience_years=round(random.uniform(0.5, 3.5), 1),
                 availability_json=json.dumps(avail),
-                interests_json=json.dumps(["Khởi nghiệp Đa ngành", "EdTech", "FinTech", "E-Commerce"]),
+                interests_json=json.dumps(["Phát triển phần mềm", "Khởi nghiệp", "UI/UX", "AI"]),
                 commitment_level=CommitmentLevel.HIGH,
                 completion_percentage=90,
                 updated_at=datetime.utcnow()
             )
-            session.add(dna)
+            dnas_list.append(dna)
 
+        session.add_all(students_list)
         session.commit()
 
-        print("Database successfully seeded with multi-disciplinary FPT faculties (IT, Business, Design, Languages), 60 students, 60 Team DNAs, and Interdisciplinary Grouping Session EXE101!")
+        session.add_all(dnas_list)
+        session.commit()
+
+        # 11. Seed Audit Events
+        ae1 = AuditEventRow(id="ae-01", cohort_id="cohort-01", user_id="lec_01", user_role="LECTURER", action="PUBLISH_TEAMS_OVERRIDE", payload='{"session_id": "sess_01_se1801", "teams_count": 8}', timestamp=datetime.utcnow())
+        ae2 = AuditEventRow(id="ae-02", cohort_id="cohort-01", user_id="adm_01", user_role="ADMIN", action="IMPORT_ROSTER_EXCEL", payload='{"file": "SWE201c_Roster.xlsx", "rows": 36}', timestamp=datetime.utcnow())
+        session.add_all([ae1, ae2])
+
+        session.commit()
+        print("Database successfully seeded with ALL real entities in Supabase PostgreSQL!")
 
 
 if __name__ == "__main__":

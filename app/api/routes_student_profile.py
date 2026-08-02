@@ -117,21 +117,40 @@ async def get_profile_readiness(principal: Principal = Depends(require_student))
 # Team DNA Endpoints
 # ---------------------------------------------------------------------------
 
+import json
+from sqlalchemy.orm import Session
+from app.infra.database import get_db
+from app.infra.db_models import TeamDNARow, ClassSectionRow, GroupingSessionRow
+
+
 @router.get("/team-profile")
-async def get_team_profile(principal: Principal = Depends(require_student)) -> dict[str, Any]:
-    dna = _student_dnas.get(principal.user_id)
-    if not dna:
+async def get_team_profile(db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    row = db.query(TeamDNARow).filter(TeamDNARow.student_id == principal.user_id).first()
+    if row:
+        dna = {
+            "id": row.id,
+            "student_id": row.student_id,
+            "class_section_id": row.class_section_id,
+            "skills": json.loads(row.skills_json) if row.skills_json else [],
+            "preferred_roles": json.loads(row.preferred_roles_json) if row.preferred_roles_json else [],
+            "experience_years": row.experience_years,
+            "availability": json.loads(row.availability_json) if row.availability_json else [],
+            "interests": json.loads(row.interests_json) if row.interests_json else [],
+            "commitment_level": row.commitment_level.value if hasattr(row.commitment_level, 'value') else str(row.commitment_level),
+            "completion_percentage": row.completion_percentage
+        }
+    else:
         dna = {
             "id": f"dna-{principal.user_id}",
             "student_id": principal.user_id,
-            "class_section_id": "sec-se1701",
+            "class_section_id": "sec_se1801_swe201c",
             "skills": [{"name": "Python", "proficiency": 4}, {"name": "React", "proficiency": 3}],
             "preferred_roles": ["backend", "leader"],
             "experience_years": 1.0,
             "availability": ["MON_AM", "TUE_PM", "THU_PM"],
             "interests": ["AI", "Web Development"],
             "commitment_level": "HIGH",
-            "completion_percentage": 75
+            "completion_percentage": 90
         }
     return {"data": dna}
 
@@ -139,6 +158,7 @@ async def get_team_profile(principal: Principal = Depends(require_student)) -> d
 @router.put("/team-profile")
 async def update_team_profile(
     payload: TeamDNAProfilePayload,
+    db: Session = Depends(get_db),
     principal: Principal = Depends(require_student)
 ) -> dict[str, Any]:
     checks = [
@@ -153,9 +173,38 @@ async def update_team_profile(
     weights = [20, 15, 15, 15, 10, 10, 15]
     completion = sum(w for c, w in zip(checks, weights) if c)
 
+    row = db.query(TeamDNARow).filter(TeamDNARow.student_id == principal.user_id).first()
+    skills_json_str = json.dumps([s.model_dump() for s in payload.skills])
+    roles_json_str = json.dumps(payload.preferred_roles)
+    avail_json_str = json.dumps(payload.availability)
+    interests_json_str = json.dumps(payload.interests)
+
+    if row:
+        row.skills_json = skills_json_str
+        row.preferred_roles_json = roles_json_str
+        row.availability_json = avail_json_str
+        row.interests_json = interests_json_str
+        row.commitment_level = payload.commitment_level
+        row.completion_percentage = completion
+    else:
+        row = TeamDNARow(
+            id=f"dna-{principal.user_id}",
+            student_id=principal.user_id,
+            class_section_id=payload.class_section_id or "sec_se1801_swe201c",
+            skills_json=skills_json_str,
+            preferred_roles_json=roles_json_str,
+            availability_json=avail_json_str,
+            interests_json=interests_json_str,
+            commitment_level=payload.commitment_level,
+            completion_percentage=completion
+        )
+        db.add(row)
+
+    db.commit()
+
     dna = {
-        "id": f"dna-{principal.user_id}",
-        "student_id": principal.user_id,
+        "id": row.id,
+        "student_id": row.student_id,
         "completion_percentage": completion,
         **payload.model_dump()
     }

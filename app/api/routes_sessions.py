@@ -59,22 +59,65 @@ _sessions_db: list[dict[str, Any]] = [
 # Session CRUD Endpoints
 # ---------------------------------------------------------------------------
 
+import json
+from sqlalchemy.orm import Session
+from app.infra.database import get_db
+from app.infra.db_models import GroupingSessionRow
+from app.domain.models import GroupingSessionStatus
+
+
 @router.get("")
-async def list_sessions(principal: Principal = Depends(require_student)) -> dict[str, Any]:
-    return {"data": _sessions_db, "meta": {"total": len(_sessions_db)}}
+async def list_sessions(db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    rows = db.query(GroupingSessionRow).all()
+    sessions = [
+        {
+            "id": r.id,
+            "class_section_id": r.class_section_id,
+            "name": r.name,
+            "mode": r.mode.value if hasattr(r.mode, 'value') else str(r.mode),
+            "team_min_size": r.team_min_size,
+            "team_max_size": r.team_max_size,
+            "status": r.status.value if hasattr(r.status, 'value') else str(r.status),
+            "created_by": principal.user_id,
+        }
+        for r in rows
+    ]
+    if not sessions:
+        sessions = _sessions_db
+    return {"data": sessions, "meta": {"total": len(sessions)}}
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_session(
     payload: SessionCreatePayload,
+    db: Session = Depends(get_db),
     principal: Principal = Depends(require_lecturer)
 ) -> dict[str, Any]:
     sid = f"sess-{uuid.uuid4().hex[:8]}"
+    db_item = GroupingSessionRow(
+        id=sid,
+        class_section_id=payload.class_section_id,
+        name=payload.name,
+        mode=payload.mode,
+        team_min_size=payload.team_min_size,
+        team_max_size=payload.team_max_size,
+        required_roles_json=json.dumps(payload.required_roles),
+        required_skills_json=json.dumps(payload.required_skills),
+        allow_cross_major=payload.allow_cross_major,
+        weights_json=json.dumps(payload.weights),
+        status=GroupingSessionStatus.OPEN,
+    )
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+
     item = {
-        "id": sid,
-        "status": "DRAFT",
+        "id": db_item.id,
+        "class_section_id": db_item.class_section_id,
+        "name": db_item.name,
+        "mode": db_item.mode.value if hasattr(db_item.mode, 'value') else str(db_item.mode),
+        "status": db_item.status.value if hasattr(db_item.status, 'value') else str(db_item.status),
         "created_by": principal.user_id,
-        **payload.model_dump()
     }
     _sessions_db.append(item)
     return {"data": item}
