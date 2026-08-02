@@ -41,9 +41,9 @@ jobs:
         run: |
           uv run ruff check .
 
-      - name: Run Backend Pytest Suite (48 Test Cases)
+      - name: Run Backend Pytest Suite (48 Test Cases against Supabase PostgreSQL)
         env:
-          DATABASE_URL: "sqlite:///:memory:"
+          DATABASE_URL: "postgresql://postgres.myjbxvicqcugiljqjfhx:Binh%40123_%3D%3F%21@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
           JWT_SECRET_KEY: "ci-cd-test-jwt-secret-key-for-github-actions"
         run: |
           uv run pytest -q
