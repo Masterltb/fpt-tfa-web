@@ -83,6 +83,23 @@ async def get_student_dashboard(principal: Principal = Depends(require_student))
     }
 
 
+@router.get("/sections")
+async def get_student_sections(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    sections = [
+        {
+            "id": "sec-se1701",
+            "code": "SE1701",
+            "course_id": "crs-prn232",
+            "course_code": "PRN232",
+            "course_name": "C# & .NET Enterprise Applications",
+            "term_id": "term-fall26",
+            "status": "ACTIVE"
+        }
+    ]
+    return {"data": sections, "meta": {"total": len(sections)}}
+
+
+
 @router.get("/profile-readiness")
 async def get_profile_readiness(principal: Principal = Depends(require_student)) -> dict[str, Any]:
     dna = _student_dnas.get(principal.user_id, {})
@@ -196,6 +213,23 @@ async def add_experience(
     return {"data": item}
 
 
+@router.patch("/experiences/{experience_id}")
+async def patch_experience(
+    experience_id: str,
+    payload: ExperiencePayload,
+    principal: Principal = Depends(require_student)
+) -> dict[str, Any]:
+    exps = _student_experiences.get(principal.user_id, [])
+    item = next((e for e in exps if e["id"] == experience_id), None)
+    if not item:
+        item = {"id": experience_id, **payload.model_dump()}
+        exps.append(item)
+    else:
+        item.update(payload.model_dump())
+    return {"data": item}
+
+
+
 @router.delete("/experiences/{experience_id}")
 async def delete_experience(
     experience_id: str,
@@ -204,3 +238,34 @@ async def delete_experience(
     exps = _student_experiences.get(principal.user_id, [])
     _student_experiences[principal.user_id] = [e for e in exps if e["id"] != experience_id]
     return {"data": {"message": "Experience deleted"}}
+
+
+@router.get("/grouping-sessions")
+async def list_my_grouping_sessions(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    sessions = [
+        {
+            "id": "sess-fall26-01",
+            "name": "Capstar Team Formation - Fall 2026",
+            "class_section_id": "sec-se1701",
+            "mode": "HYBRID",
+            "status": "OPEN",
+            "team_min_size": 4,
+            "team_max_size": 5
+        }
+    ]
+    return {"data": sessions, "meta": {"total": len(sessions)}}
+
+
+@router.get("/grouping-sessions/{session_id}")
+async def get_my_grouping_session(session_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    session = {
+        "id": session_id,
+        "name": "Capstar Team Formation - Fall 2026",
+        "class_section_id": "sec-se1701",
+        "mode": "HYBRID",
+        "status": "OPEN",
+        "team_min_size": 4,
+        "team_max_size": 5
+    }
+    return {"data": session}
+

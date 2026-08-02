@@ -258,3 +258,81 @@ async def reject_join_request(request_id: str, principal: Principal = Depends(re
         jr = {"id": request_id, "team_id": "team-01", "status": "PENDING"}
     jr["status"] = "REJECTED"
     return {"data": jr}
+
+
+@router.delete("/teams/{team_id}/members/{student_id}")
+async def remove_team_member(team_id: str, student_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    return {"data": {"message": "Member removed"}}
+
+
+@router.post("/teams/{team_id}/leave")
+async def leave_team(team_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    return {"data": {"message": "Left team"}}
+
+
+@router.post("/teams/{team_id}/withdraw")
+async def withdraw_team_submission(team_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    team = next((t for t in _teams_db if t["id"] == team_id), None)
+    if team:
+        team["status"] = "FORMING"
+    return {"data": team or {"id": team_id, "status": "FORMING"}}
+
+
+@router.post("/teams/{team_id}/lock")
+async def lock_team(team_id: str, principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    team = next((t for t in _teams_db if t["id"] == team_id), None)
+    if team:
+        team["is_locked"] = True
+    return {"data": team or {"id": team_id, "is_locked": True}}
+
+
+@router.post("/teams/{team_id}/unlock")
+async def unlock_team(team_id: str, principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    team = next((t for t in _teams_db if t["id"] == team_id), None)
+    if team:
+        team["is_locked"] = False
+    return {"data": team or {"id": team_id, "is_locked": False}}
+
+
+@router.post("/teams/{team_id}/move-member")
+async def move_member(team_id: str, payload: dict[str, Any], principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    return {"data": {"message": "Member moved successfully"}}
+
+
+@router.get("/teams/{team_id}/invitations")
+async def list_team_invitations(team_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    invs = [i for i in _invitations_db if i.get("team_id") == team_id]
+    return {"data": invs, "meta": {"total": len(invs)}}
+
+
+@router.get("/students/me/invitations")
+async def list_my_invitations(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    invs = [i for i in _invitations_db if i.get("to_student_id") == principal.user_id]
+    return {"data": invs, "meta": {"total": len(invs)}}
+
+
+@router.delete("/invitations/{invitation_id}")
+async def cancel_invitation(invitation_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    global _invitations_db
+    _invitations_db = [i for i in _invitations_db if i["id"] != invitation_id]
+    return {"data": {"message": "Invitation cancelled"}}
+
+
+@router.get("/teams/{team_id}/join-requests")
+async def list_team_join_requests(team_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    jrs = [j for j in _join_requests_db if j.get("team_id") == team_id]
+    return {"data": jrs, "meta": {"total": len(jrs)}}
+
+
+@router.get("/students/me/join-requests")
+async def list_my_join_requests(principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    jrs = [j for j in _join_requests_db if j.get("from_student_id") == principal.user_id]
+    return {"data": jrs, "meta": {"total": len(jrs)}}
+
+
+@router.delete("/join-requests/{request_id}")
+async def cancel_join_request(request_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    global _join_requests_db
+    _join_requests_db = [j for j in _join_requests_db if j["id"] != request_id]
+    return {"data": {"message": "Join request cancelled"}}
+

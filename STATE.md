@@ -1,7 +1,7 @@
 # STATE
 
 - **Last updated:** 2026-08-02
-- **Last verified commit:** (Multi-Agent Backend Complete)
+- **Last verified commit:** (Phase 1 Frontend Architecture & API Client Complete)
 - **Active pack:** tfa
 - **Loop level:** L1
 - **loops_paused:** false
@@ -13,21 +13,18 @@ loops_paused: false
 
 ## Current focus
 
-**Multi-Agent Backend Build Completed.** Implemented and verified full Python FastAPI + SQLAlchemy 2.0 + PostgreSQL ORM + OR-Tools matching engine backend across 7 agent workstreams.
+**Phase 1 Frontend Architecture & Integration Foundation Completed.** Scaffolded React 18 + Vite 5 + TypeScript + Tailwind CSS v4 + TanStack Query v5 + React Router v6 in `web/`.
 
 ### What is verified
-- **39 tests PASS** (`uv run pytest`) across unit, domain, OR-Tools, and integration test suites.
-- **Ruff Check PASS** (`uv run ruff check .`) with 0 errors.
-- **Agent 1 (Infrastructure & DB)**: Created SQLAlchemy 2.0 ORM mappings in `app/infra/db_models.py` and database sessions in `app/infra/database.py`.
-- **Agent 2 (Auth & RBAC)**: Enhanced FastAPI dependency guards (`deps.py`) supporting Firebase Auth + 3 roles (Student, Lecturer, Admin).
-- **Agent 3 (Admin Module)**: Academic structure CRUD & CSV roster import engine (`routes_admin.py`, `csv_importer.py`).
-- **Agent 4 (Student Module)**: Team DNA profile wizard & Student-led team formation APIs (`routes_profile.py`, `routes_student_team.py`).
-- **Agent 5 (Lecturer Module)**: Grouping session configuration, matching trigger, drag & drop override, and team publish APIs (`routes_lecturer.py`).
-- **Agent 6 (Matching Engine)**: Transparent explainability rationale generator (`app/matching/explainability.py`).
-- **Agent 7 (Harness Verification)**: Full integration test suite in `tests/test_multi_agent_backend.py`.
+- **48 tests PASS** (`uv run pytest`) across backend unit, domain, OR-Tools, and integration test suites.
+- **Frontend Typecheck PASS** (`npx tsc --noEmit`) with 0 errors.
+- **Audited UX Master Spec (47 Screens)**: Detailed specification artifact covering all 6 functional groups, 3 roles, 3 grouping modes, weekly check-ins, risk alerts, smart rebalance, major catalog, dev mock auth, and RBAC 403 states.
+- **Agent Skill & Workflow Infrastructure**: Created 4 skill/workflow packages (`ui-ux`, `api-integration`, `harness-governance`, `feature-delivery`) under `.agents/skills/` and `.agent/workflows/`.
+- **API Client Foundation**: Configured Axios client with RFC 7807 error interceptors, envelope unwrapping, dev mock bearer token generator (`createDevMockToken`), and TanStack Query client.
+- **Core App Shell**: Created `web/src/App.tsx` with Dev Mock Auth Bar (Screen 45), Landing Page (Screen 01), Login (Screen 07), and Student/Lecturer/Admin Dashboard routing.
 
 ## Next steps
 
-1. Phase 1 Frontend: React Router v6 + TanStack Query + Tailwind v4 + Shadcn integration.
-2. Connect Frontend components to new Multi-Agent Backend endpoints.
-3. Deploy & End-to-End Playwright test verification.
+1. Build out Student Portal screens (Team DNA Wizard, Section Workspace, AI Recommendations, Team Detail Workspace).
+2. Build out Lecturer Portal screens (Session Builder Wizard, AI Matching Run Progress, Drag-Drop Override Studio).
+3. End-to-end integration verification with FastAPI Backend API.

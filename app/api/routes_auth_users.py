@@ -49,6 +49,20 @@ class UserPatchPayload(BaseModel):
     user_status: UserStatus | None = None
 
 
+class ForgotPasswordPayload(BaseModel):
+    email: str
+
+
+class ResetPasswordPayload(BaseModel):
+    token: str
+    new_password: str = Field(min_length=6)
+
+
+class UserStatusPatchPayload(BaseModel):
+    status: UserStatus
+
+
+
 _mock_users: list[dict[str, Any]] = [
     {
         "id": "admin-001",
@@ -87,10 +101,10 @@ _mock_users: list[dict[str, Any]] = [
 @router.post("/auth/login")
 async def login(payload: LoginPayload) -> dict[str, Any]:
     user = next((u for u in _mock_users if u["email"] == payload.email), None)
-    if not user and not payload.email.endswith("@fpt.edu.vn"):
+    if not user and "@" not in payload.email:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials or email domain."
+            detail="Invalid credentials or email format."
         )
 
     user_id = user["id"] if user else f"usr-{uuid.uuid4().hex[:8]}"
@@ -152,6 +166,29 @@ async def change_password(
     principal: Principal = Depends(current_principal)
 ) -> dict[str, Any]:
     return {"data": {"message": "Password changed successfully"}}
+
+
+@router.get("/config/public")
+async def get_public_config() -> dict[str, Any]:
+    return {
+        "data": {
+            "app_name": "Team Formation Assistant",
+            "version": "1.0.0",
+            "auth_methods": ["jwt"],
+            "grouping_modes": ["STUDENT_LED", "LECTURER_LED", "HYBRID"]
+        }
+    }
+
+
+@router.post("/auth/forgot-password")
+async def forgot_password(payload: ForgotPasswordPayload) -> dict[str, Any]:
+    return {"data": {"message": "If the email exists, a password reset link has been sent."}}
+
+
+@router.post("/auth/reset-password")
+async def reset_password(payload: ResetPasswordPayload) -> dict[str, Any]:
+    return {"data": {"message": "Password has been successfully reset."}}
+
 
 
 # ---------------------------------------------------------------------------
@@ -230,3 +267,33 @@ async def bulk_import_users(
     content = await file.read()
     summary = parse_csv_roster(content)
     return {"data": summary.model_dump()}
+
+
+@router.patch("/users/{user_id}/status")
+async def update_user_status(
+    user_id: str,
+    payload: UserStatusPatchPayload,
+    _admin: Principal = Depends(require_admin)
+) -> dict[str, Any]:
+    user = next((u for u in _mock_users if u["id"] == user_id), None)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user["user_status"] = payload.status.value
+    return {"data": user}
+
+
+@router.get("/users/imports/{import_id}")
+async def get_user_import_status(
+    import_id: str,
+    _admin: Principal = Depends(require_admin)
+) -> dict[str, Any]:
+    return {
+        "data": {
+            "import_id": import_id,
+            "status": "COMPLETED",
+            "total_processed": 35,
+            "success_count": 35,
+            "error_count": 0
+        }
+    }
+

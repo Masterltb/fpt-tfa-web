@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from pydantic import BaseModel
 
-from app.api.deps import Principal, require_admin, require_lecturer, get_engine
+from app.api.deps import Principal, require_admin, require_lecturer, get_engine, current_principal
 from app.matching.engine import MatchingEngine
 
 router = APIRouter(prefix="/api/v1", tags=["Matching, Review Board, Reports & Audit"])
@@ -172,6 +172,74 @@ async def export_teams_csv(session_id: str, principal: Principal = Depends(requi
     return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=session_{session_id}_teams.csv"})
 
 
+@router.get("/match-runs/{run_id}/recommendations")
+async def get_match_recommendations(run_id: str, principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    recs = [
+        {"team_name": "Suggested Team 1", "member_ids": ["stu-001", "stu-002"], "rationale": "High skill balance"}
+    ]
+    return {"data": recs, "meta": {"total": len(recs)}}
+
+
+@router.post("/match-runs/{run_id}/cancel")
+async def cancel_match_run(run_id: str, principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    return {"data": {"id": run_id, "status": "CANCELLED"}}
+
+
+@router.patch("/grouping-sessions/{session_id}/review-board")
+async def update_review_board(session_id: str, payload: dict[str, Any], principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    return {"data": {"session_id": session_id, "message": "Review board updated"}}
+
+
+@router.post("/grouping-sessions/{session_id}/validate")
+async def validate_review_board(session_id: str, principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    return {"data": {"valid": True, "conflicts": []}}
+
+
+@router.get("/grouping-sessions/{session_id}/conflicts")
+async def get_review_board_conflicts(session_id: str, principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    return {"data": [], "meta": {"total": 0}}
+
+
+@router.post("/grouping-sessions/{session_id}/auto-fill")
+async def auto_fill_review_board(session_id: str, principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    return {"data": {"message": "Auto-filled remaining students"}}
+
+
+@router.get("/notifications")
+async def list_notifications(principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+    notifs = [
+        {"id": "notif-1", "title": "Session Opened", "message": "Grouping session is now open", "read": False}
+    ]
+    return {"data": notifs, "meta": {"total": len(notifs)}}
+
+
+@router.patch("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+    return {"data": {"id": notification_id, "read": True}}
+
+
+@router.post("/notifications/read-all")
+async def mark_all_notifications_read(principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+    return {"data": {"message": "All notifications marked as read"}}
+
+
+@router.get("/notifications/unread-count")
+async def get_unread_notifications_count(principal: Principal = Depends(current_principal)) -> dict[str, Any]:
+    return {"data": {"unread_count": 1}}
+
+
+@router.get("/grouping-sessions/{session_id}/reports/summary")
+async def get_session_reports_summary(session_id: str, principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
+    return {"data": {"session_id": session_id, "total_teams": 8, "total_students": 35, "unassigned": 0}}
+
+
+@router.get("/sections/{section_id}/exports/roster.csv")
+async def export_roster_csv(section_id: str, principal: Principal = Depends(require_lecturer)) -> Response:
+    csv_data = "student_id,student_code,name,email\nstu-001,SE170001,Nguyen Van A,anv@fpt.edu.vn\n"
+    return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=roster_{section_id}.csv"})
+
+
 @router.get("/audit-logs")
 async def list_audit_logs(_admin: Principal = Depends(require_admin)) -> dict[str, Any]:
     return {"data": _audit_logs_db, "meta": {"total": len(_audit_logs_db)}}
+

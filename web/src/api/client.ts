@@ -1,91 +1,66 @@
+import axios, { AxiosError, AxiosResponse } from 'axios';
+import { ApiErrorResponse } from '../types/api';
+
 /**
- * TFA API Client — Interacts with FastAPI backend REST API (v1.0.0).
+ * Helper to generate a valid Base64 Bearer Token for Local Dev Mode (without Firebase).
+ * Backend app/api/deps.py decodes token via base64.b64decode() when FIREBASE_PROJECT_ID is absent.
  */
-
-const API_BASE = "/api/v1";
-
-export interface ApiResponse<T> {
-  data: T;
-  meta?: {
-    total?: number;
-    page?: number;
-    pageSize?: number;
-  };
-  traceId?: string;
+export function createDevMockToken(userId: string, role: 'STUDENT' | 'LECTURER' | 'ADMIN'): string {
+  const payload = JSON.stringify({ uid: userId, role: role.toLowerCase() });
+  return typeof window !== 'undefined' ? btoa(payload) : Buffer.from(payload).toString('base64');
 }
 
-export async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {},
-  token?: string
-): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
-  };
+export const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  } else {
-    // Default fallback dev token
-    headers["Authorization"] = "Bearer eyJ1aWQiOiJzdHUtMDAxIiwgInJvbGUiOiAic3R1ZGVudCJ9";
-  }
+// Request Interceptor: Inject Authorization Bearer Token
+apiClient.interceptors.request.use((config) => {
+  const savedToken = localStorage.getItem('tfa_token');
+  const activeRole = (localStorage.getItem('tfa_role') as 'STUDENT' | 'LECTURER' | 'ADMIN') || 'STUDENT';
+  const activeUserId = localStorage.getItem('tfa_user_id') || 'stu_01';
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const token = savedToken || createDevMockToken(activeUserId, activeRole);
+  config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
-  if (!response.ok) {
-    let errorDetail = "API Request Failed";
-    try {
-      const errJson = await response.json();
-      errorDetail = errJson.detail || errJson.message || JSON.stringify(errJson);
-    } catch {
-      // Ignore JSON parse error
+// Response Interceptor: RFC 7807 Error Extraction & Envelope Unwrapping
+apiClient.interceptors.response.use(
+  (response: AxiosResponse) => {
+    // Unwraps success envelope data if present
+    return response.data?.data !== undefined ? response.data : response;
+  },
+  (error: AxiosError<ApiErrorResponse>) => {
+    if (!error.response) {
+      return Promise.reject({
+        status: 0,
+        title: 'Lỗi Kết Nối Ngoại Tuyến',
+        detail: 'Không thể kết nối đến máy chủ TFA Backend (port 8000). Vui lòng kiểm tra lại mạng.',
+      });
     }
-    throw new Error(`HTTP ${response.status}: ${errorDetail}`);
+
+    const status = error.response.status;
+    const data = error.response.data;
+
+    let errorMessage = data?.detail || data?.title || 'Đã xảy ra lỗi hệ thống.';
+    if (Array.isArray(errorMessage)) {
+      errorMessage = (errorMessage as any[]).map((e: any) => `${e.loc?.slice(-1)}: ${e.msg}`).join(', ');
+    }
+
+    if (status === 401) {
+      localStorage.removeItem('tfa_token');
+    }
+
+    return Promise.reject({
+      status,
+      title: data?.title || 'Lỗi Yêu Cầu',
+      detail: errorMessage,
+      errors: data?.errors || [],
+      raw: data,
+    });
   }
-
-  const json = await response.json();
-  return (json.data !== undefined ? json.data : json) as T;
-}
-
-// ---------------------------------------------------------------------------
-// API Methods
-// ---------------------------------------------------------------------------
-
-export const ApiClient = {
-  // Auth
-  login: (email: string, pass: string) =>
-    apiFetch<{ access_token: string; user: { id: string; role: string } }>(
-      "/auth/login",
-      { method: "POST", body: JSON.stringify({ email, password: pass }) }
-    ),
-
-  getMe: (token?: string) => apiFetch<{ id: string; email: string; role: string }>("/auth/me", {}, token),
-
-  // Academic Catalogs
-  getCampuses: () => apiFetch<Array<{ id: string; code: string; name: string }>>("/campuses"),
-  getTerms: () => apiFetch<Array<{ id: string; name: string; status: string }>>("/terms"),
-  getMajors: () => apiFetch<Array<{ id: string; code: string; name: string }>>("/majors"),
-  getCourses: () => apiFetch<Array<{ id: string; code: string; name: string }>>("/courses"),
-  getSections: () => apiFetch<Array<{ id: string; code: string; status: string }>>("/sections"),
-
-  // Student Profile & Team DNA
-  getStudentDashboard: (token?: string) => apiFetch<any>("/students/me/dashboard", {}, token),
-  getTeamProfile: (token?: string) => apiFetch<any>("/students/me/team-profile", {}, token),
-  updateTeamProfile: (payload: any, token?: string) =>
-    apiFetch<any>("/students/me/team-profile", { method: "PUT", body: JSON.stringify(payload) }, token),
-
-  // Grouping Sessions & Lecturer
-  getGroupingSessions: () => apiFetch<Array<any>>("/grouping-sessions"),
-  createMatchRun: (sessionId: string, seed: number = 42) =>
-    apiFetch<any>(`/grouping-sessions/${sessionId}/match-runs`, {
-      method: "POST",
-      body: JSON.stringify({ seed, time_limit_seconds: 5.0 }),
-    }),
-  getReviewBoard: (sessionId: string) => apiFetch<any>(`/grouping-sessions/${sessionId}/review-board`),
-  publishSession: (sessionId: string) =>
-    apiFetch<any>(`/grouping-sessions/${sessionId}/publish`, { method: "POST" }),
-};
+);

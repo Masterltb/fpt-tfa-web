@@ -72,6 +72,13 @@ _sections_db = [
     }
 ]
 
+_team_roles_db = [
+    {"id": "rol-1", "name": "Frontend Lead", "description": "Responsible for UI/UX implementation"},
+    {"id": "rol-2", "name": "Backend Lead", "description": "Responsible for APIs and database"},
+    {"id": "rol-3", "name": "QA Lead", "description": "Responsible for test automation and quality"}
+]
+
+
 
 # ---------------------------------------------------------------------------
 # Catalog Endpoints
@@ -167,3 +174,232 @@ async def import_section_students(
     content = await file.read()
     summary = parse_csv_roster(content)
     return {"data": summary.model_dump()}
+
+
+@router.get("/campuses/{campus_id}")
+async def get_campus(campus_id: str) -> dict[str, Any]:
+    item = next((c for c in _campuses_db if c["id"] == campus_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campus not found")
+    return {"data": item}
+
+
+@router.patch("/campuses/{campus_id}")
+async def update_campus(campus_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    item = next((c for c in _campuses_db if c["id"] == campus_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campus not found")
+    item.update(payload)
+    return {"data": item}
+
+
+@router.delete("/campuses/{campus_id}")
+async def delete_campus(campus_id: str, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    global _campuses_db
+    _campuses_db = [c for c in _campuses_db if c["id"] != campus_id]
+    return {"data": {"message": "Campus deleted"}}
+
+
+@router.post("/terms", status_code=status.HTTP_201_CREATED)
+async def create_term(payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    tid = f"term-{uuid.uuid4().hex[:6]}"
+    item = {"id": tid, "status": "PLANNED", **payload}
+    _terms_db.append(item)
+    return {"data": item}
+
+
+@router.get("/terms/{term_id}")
+async def get_term(term_id: str) -> dict[str, Any]:
+    item = next((t for t in _terms_db if t["id"] == term_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Term not found")
+    return {"data": item}
+
+
+@router.patch("/terms/{term_id}")
+async def update_term(term_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    item = next((t for t in _terms_db if t["id"] == term_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Term not found")
+    item.update(payload)
+    return {"data": item}
+
+
+@router.delete("/terms/{term_id}")
+async def delete_term(term_id: str, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    global _terms_db
+    _terms_db = [t for t in _terms_db if t["id"] != term_id]
+    return {"data": {"message": "Term deleted"}}
+
+
+@router.get("/majors/{major_id}")
+async def get_major(major_id: str) -> dict[str, Any]:
+    item = next((m for m in _majors_db if m["id"] == major_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Major not found")
+    return {"data": item}
+
+
+@router.patch("/majors/{major_id}")
+async def update_major(major_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    item = next((m for m in _majors_db if m["id"] == major_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Major not found")
+    item.update(payload)
+    return {"data": item}
+
+
+@router.delete("/majors/{major_id}")
+async def delete_major(major_id: str, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    global _majors_db
+    _majors_db = [m for m in _majors_db if m["id"] != major_id]
+    return {"data": {"message": "Major deleted"}}
+
+
+@router.post("/courses", status_code=status.HTTP_201_CREATED)
+async def create_course(payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    cid = f"crs-{uuid.uuid4().hex[:6]}"
+    item = {"id": cid, **payload}
+    _courses_db.append(item)
+    return {"data": item}
+
+
+@router.get("/courses/{course_id}")
+async def get_course(course_id: str) -> dict[str, Any]:
+    item = next((c for c in _courses_db if c["id"] == course_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    return {"data": item}
+
+
+@router.patch("/courses/{course_id}")
+async def update_course(course_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    item = next((c for c in _courses_db if c["id"] == course_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+    item.update(payload)
+    return {"data": item}
+
+
+@router.delete("/courses/{course_id}")
+async def delete_course(course_id: str, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    global _courses_db
+    _courses_db = [c for c in _courses_db if c["id"] != course_id]
+    return {"data": {"message": "Course deleted"}}
+
+
+@router.get("/skills/{skill_id}")
+async def get_skill(skill_id: str) -> dict[str, Any]:
+    item = next((s for s in _skills_db if s["id"] == skill_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found")
+    return {"data": item}
+
+
+@router.patch("/skills/{skill_id}")
+async def update_skill(skill_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    item = next((s for s in _skills_db if s["id"] == skill_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found")
+    item.update(payload)
+    return {"data": item}
+
+
+@router.get("/team-roles")
+async def list_team_roles() -> dict[str, Any]:
+    return {"data": _team_roles_db}
+
+
+@router.post("/team-roles", status_code=status.HTTP_201_CREATED)
+async def create_team_role(payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    rid = f"rol-{uuid.uuid4().hex[:6]}"
+    item = {"id": rid, **payload}
+    _team_roles_db.append(item)
+    return {"data": item}
+
+
+@router.get("/team-roles/{role_id}")
+async def get_team_role(role_id: str) -> dict[str, Any]:
+    item = next((r for r in _team_roles_db if r["id"] == role_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team role not found")
+    return {"data": item}
+
+
+@router.patch("/team-roles/{role_id}")
+async def update_team_role(role_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    item = next((r for r in _team_roles_db if r["id"] == role_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team role not found")
+    item.update(payload)
+    return {"data": item}
+
+
+@router.post("/sections", status_code=status.HTTP_201_CREATED)
+async def create_section(payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    sid = f"sec-{uuid.uuid4().hex[:6]}"
+    item = {"id": sid, "status": "ACTIVE", **payload}
+    _sections_db.append(item)
+    return {"data": item}
+
+
+@router.get("/sections/{section_id}")
+async def get_section(section_id: str) -> dict[str, Any]:
+    item = next((s for s in _sections_db if s["id"] == section_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
+    return {"data": item}
+
+
+@router.patch("/sections/{section_id}")
+async def update_section(section_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    item = next((s for s in _sections_db if s["id"] == section_id), None)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
+    item.update(payload)
+    return {"data": item}
+
+
+@router.delete("/sections/{section_id}")
+async def delete_section(section_id: str, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    global _sections_db
+    _sections_db = [s for s in _sections_db if s["id"] != section_id]
+    return {"data": {"message": "Section deleted"}}
+
+
+@router.get("/sections/{section_id}/lecturers")
+async def get_section_lecturers(section_id: str) -> dict[str, Any]:
+    lecs = [{"id": "lec-001", "name": "Dr. Le Van A", "email": "lecturer@fpt.edu.vn"}]
+    return {"data": lecs, "meta": {"total": len(lecs)}}
+
+
+@router.post("/sections/{section_id}/lecturers")
+async def assign_section_lecturer(section_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    return {"data": {"section_id": section_id, "lecturer_id": payload.get("lecturer_id")}}
+
+
+@router.delete("/sections/{section_id}/lecturers/{lecturer_id}")
+async def remove_section_lecturer(section_id: str, lecturer_id: str, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    return {"data": {"message": "Lecturer removed from section"}}
+
+
+@router.post("/sections/{section_id}/students")
+async def add_section_student(section_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    return {"data": {"section_id": section_id, "student_id": payload.get("student_id")}}
+
+
+@router.delete("/sections/{section_id}/students/{student_id}")
+async def remove_section_student(section_id: str, student_id: str, _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    return {"data": {"message": "Student removed from section"}}
+
+
+@router.get("/sections/{section_id}/timetable")
+async def get_section_timetable(section_id: str) -> dict[str, Any]:
+    tt = [{"day_of_week": "MONDAY", "slot": 1, "room": "BE-401"}]
+    return {"data": tt}
+
+
+@router.put("/sections/{section_id}/timetable")
+async def put_section_timetable(section_id: str, payload: dict[str, Any], _admin: Principal = Depends(require_admin)) -> dict[str, Any]:
+    return {"data": payload.get("timetable", [])}
+
