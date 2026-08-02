@@ -11,11 +11,27 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./tfa.db")
+from urllib.parse import quote_plus
 
-# Convert postgres:// to postgresql:// if needed for SQLAlchemy
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+def format_database_url(raw_url: str) -> str:
+    if raw_url.startswith("postgres://"):
+        raw_url = raw_url.replace("postgres://", "postgresql://", 1)
+    if "://" in raw_url and "@" in raw_url:
+        try:
+            scheme, rest = raw_url.split("://", 1)
+            # Find last '@' which separates userinfo from host
+            userinfo, host_part = rest.rsplit("@", 1)
+            if ":" in userinfo:
+                user, pwd = userinfo.split(":", 1)
+                # Avoid double encoding if already quoted
+                if "%" not in pwd:
+                    pwd = quote_plus(pwd)
+                return f"{scheme}://{user}:{pwd}@{host_part}"
+        except Exception:
+            pass
+    return raw_url
+
+DATABASE_URL = format_database_url(os.environ.get("DATABASE_URL", "sqlite:///./tfa.db"))
 
 # Configure engine arguments
 engine_kwargs = {"future": True}

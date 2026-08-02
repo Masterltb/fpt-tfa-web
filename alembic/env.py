@@ -11,7 +11,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 # Import our base and all DB models so Alembic can detect them for autogenerate
-from app.infra.database import Base  # noqa: F401
+from app.infra.database import Base, format_database_url  # noqa: F401
 import app.infra.db_models  # noqa: F401
 import app.infra.db  # noqa: F401
 
@@ -20,9 +20,8 @@ config = context.config
 # Override sqlalchemy.url from environment if set
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
-    config.set_main_option("sqlalchemy.url", database_url)
+    database_url = format_database_url(database_url)
+    config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
