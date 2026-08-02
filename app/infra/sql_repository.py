@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select, update
 import json
 from uuid import uuid4
+from datetime import datetime, timezone
 
 from ..domain.models import Cohort, FormationRun, Team, Constraint, Student, Skill
 from .db import (
@@ -52,6 +53,7 @@ class SqlCohortRepository:
                 seed=run_data.seed,
                 status=run_data.status,
                 balance=run_data.balance,
+                unassignable=json.dumps(run_data.unassignable),
                 created_at=run_data.created_at,
             )
             for t in run_data.teams:
@@ -60,7 +62,9 @@ class SqlCohortRepository:
                     formation_id=run_data.id,
                     name=t.id,
                     rationale=t.rationale,
-                    member_ids=",".join(t.member_ids)
+                    member_ids=",".join(t.member_ids),
+                    scores=json.dumps(t.scores),
+                    overridden=t.overridden,
                 )
                 row.teams.append(t_row)
             session.add(row)
@@ -75,7 +79,9 @@ class SqlCohortRepository:
                 Team(
                     id=t.id,
                     member_ids=t.member_ids.split(",") if t.member_ids else [],
-                    rationale=t.rationale
+                    rationale=t.rationale,
+                    scores=json.loads(t.scores) if t.scores else {},
+                    overridden=bool(t.overridden),
                 )
                 for t in row.teams
             ]
@@ -89,7 +95,8 @@ class SqlCohortRepository:
                 status=row.status,
                 balance=row.balance,
                 created_at=row.created_at,
-                teams=teams
+                teams=teams,
+                unassignable=[tuple(u) for u in json.loads(row.unassignable or "[]")],
             )
 
     def update_formation_run_teams(self, formation_id: str, teams: list[Team]) -> None:
@@ -107,7 +114,9 @@ class SqlCohortRepository:
                     formation_id=formation_id,
                     name=t.id,
                     rationale=t.rationale,
-                    member_ids=",".join(t.member_ids)
+                    member_ids=",".join(t.member_ids),
+                    scores=json.dumps(t.scores),
+                    overridden=t.overridden,
                 ))
             session.commit()
 
@@ -134,7 +143,7 @@ class SqlCohortRepository:
                 version=next_version,
                 status="active",
                 committed_by=lecturer_id,
-                committed_at=datetime.utcnow()
+                committed_at=datetime.now(timezone.utc)
             )
             session.add(commit_row)
             run.status = "committed"
@@ -179,13 +188,12 @@ class SqlCohortRepository:
 
     def log_audit_event(self, cohort_id: str, user_id: str, action: str, payload: str) -> None:
         with self._session_factory() as session:
-            from datetime import datetime
             row = AuditEventRow(
                 cohort_id=cohort_id,
                 user_id=user_id,
                 action=action,
                 payload=payload,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             session.add(row)
             session.commit()

@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 import os
 
-from sqlalchemy import String, Integer, Float, DateTime, ForeignKey, create_engine
+from sqlalchemy import String, Integer, Float, Boolean, DateTime, ForeignKey, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, relationship
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./tfa.db")
@@ -39,6 +39,7 @@ class FormationRunRow(Base):
     seed: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String)  # succeeded, infeasible, committed
     balance: Mapped[float] = mapped_column(Float)
+    unassignable: Mapped[str] = mapped_column(String, default="[]")  # JSON list of [student_id, reason]
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     teams: Mapped[list[FormationTeamRow]] = relationship(
@@ -49,11 +50,18 @@ class FormationRunRow(Base):
 class FormationTeamRow(Base):
     __tablename__ = "formation_teams"
 
+    # Composite key: the engine numbers teams "team-1..n" per run, so the id is only
+    # unique WITHIN a formation. A global PK here made every run after the first
+    # collide with UNIQUE constraint failed.
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    formation_id: Mapped[str] = mapped_column(String, ForeignKey("formation_runs.id"))
+    formation_id: Mapped[str] = mapped_column(
+        String, ForeignKey("formation_runs.id"), primary_key=True
+    )
     name: Mapped[str] = mapped_column(String)  # e.g. "team-1"
     rationale: Mapped[str] = mapped_column(String, default="")
     member_ids: Mapped[str] = mapped_column(String)  # comma-separated list of user ids
+    scores: Mapped[str] = mapped_column(String, default="{}")  # JSON dict of solver metrics
+    overridden: Mapped[bool] = mapped_column(Boolean, default=False)
 
     run: Mapped[FormationRunRow] = relationship("FormationRunRow", back_populates="teams")
 

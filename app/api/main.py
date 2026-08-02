@@ -55,5 +55,6 @@ app.include_router(cohort_router)
 
 
 @app.get("/health")
+@app.get("/api/v1/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "tfa-backend", "version": "1.0.0"}

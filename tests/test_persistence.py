@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     from sqlalchemy import create_engine
@@ -39,7 +39,7 @@ class TestPersistence(unittest.TestCase):
             seed=0,
             status="succeeded",
             balance=1.2,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             teams=[Team(id="t1", member_ids=["u1", "u2"], rationale="")]
         )
         self.repo.save_formation_run(run_data)
@@ -61,7 +61,7 @@ class TestPersistence(unittest.TestCase):
             seed=0,
             status="succeeded",
             balance=1.2,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             teams=[Team(id="t1", member_ids=["u1", "u2"], rationale="")]
         )
         self.repo.save_formation_run(run_data)
@@ -71,7 +71,7 @@ class TestPersistence(unittest.TestCase):
 
     def test_commit_run(self) -> None:
         run_data = FormationRun(
-            id="f3", cohort_id="c1", project_id="p1", min_size=3, max_size=5, seed=0, status="succeeded", balance=1.0, created_at=datetime.utcnow(), teams=[]
+            id="f3", cohort_id="c1", project_id="p1", min_size=3, max_size=5, seed=0, status="succeeded", balance=1.0, created_at=datetime.now(timezone.utc), teams=[]
         )
         self.repo.save_formation_run(run_data)
         self.repo.commit_formation_run("f3", "lec1")

@@ -388,6 +388,9 @@ class Team:
     locked: bool = False
     project_topic: str = ""
     version: int = 1
+    # Set when a lecturer changed this team by hand. The solver's scores no longer
+    # describe it, and the record must keep showing that it was amended.
+    overridden: bool = False
 
 
 @dataclass
@@ -495,6 +498,7 @@ class FormationRun:
     balance: float = 0.0
     created_at: datetime = field(default_factory=datetime.utcnow)
     teams: list[Team] = field(default_factory=list)
+    unassignable: list[tuple[str, str]] = field(default_factory=list)
 
 
 @dataclass

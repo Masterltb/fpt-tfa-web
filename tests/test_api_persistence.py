@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     from fastapi.testclient import TestClient
@@ -24,7 +24,7 @@ class TestApiPersistence(unittest.TestCase):
         
         run = FormationRun(
             id="f1", cohort_id="c1", project_id="p1", min_size=3, max_size=5, seed=0,
-            status="ok", balance=1.0, created_at=datetime.utcnow(),
+            status="ok", balance=1.0, created_at=datetime.now(timezone.utc),
             teams=[Team(id="t1", member_ids=["u1", "u2"], rationale="")]
         )
         self.repo.runs = {"f1": run}

@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+node_modules/
 web/node_modules/
 web/dist/
 .forge/harness/
@@ -33,3 +34,7 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+.agents/
+.claude/
+.opencode/
+.gemini/

@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@theme {
+  /* FPT tricolour. Confirm exact codes against the official brand guideline. */
+  --color-fpt-orange: #f37021;
+  --color-fpt-blue: #0066b3;
+  --color-fpt-green: #49a845;
+
+  /* Darkened for small text on the light ground, where the brand hues fall
+     below 4.5:1. Fills, borders and blooms keep the brand values above. */
+  --color-fpt-orange-ink: #b4530f;
+  --color-fpt-blue-ink: #005796;
+  --color-fpt-green-ink: #2f7d2c;
+
+  --color-ink: #0f172a;
+  --color-ink-soft: #52607a;
+  /* #7d8aa3 measured 3.48:1 on the light ground — below AA for the small text
+     it is used on. This is the lightest tone that still clears 4.5:1. */
+  --color-ink-faint: #64708a;
+  --color-line: #e6ebf2;
+  --color-surface: #ffffff;
+  --color-danger: #c4322b;
+
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 16px;
+}
+
+html {
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Vietnamese stacked diacritics (ế, ộ, ữ) need room; never tighten below this. */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(243, 112, 33, 0.14), transparent 28%),
+    radial-gradient(circle at 92% 12%, rgba(0, 102, 179, 0.1), transparent 30%),
+    radial-gradient(circle at 80% 92%, rgba(73, 168, 69, 0.08), transparent 28%),
+    linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background-attachment: fixed;
+}
+
+/* Two drifting blooms behind everything. Fixed and inert so they never affect
+   layout, scrolling or pointer targets. */
+.ambient {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient::before,
+.ambient::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ambient::before {
+  width: 500px;
+  height: 500px;
+  top: -220px;
+  right: -180px;
+  background: rgba(243, 112, 33, 0.16);
+  filter: blur(80px);
+  animation: float-orange 8s ease-in-out infinite alternate;
+}
+
+.ambient::after {
+  width: 420px;
+  height: 420px;
+  bottom: -220px;
+  left: -160px;
+  background: rgba(0, 102, 179, 0.12);
+  filter: blur(90px);
+  animation: float-blue 10s ease-in-out infinite alternate;
+}
+
+@keyframes float-orange {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(-40px, 35px) scale(1.12);
+  }
+}
+
+@keyframes float-blue {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(45px, -25px) scale(1.1);
+  }
+}
+
+/* The one authored moment: a card settles when its contents change. */
+@keyframes settle {
+  from {
+    opacity: 0.55;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.settle {
+  animation: settle 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient::before,
+  .ambient::after,
+  .settle {
+    animation: none;
+  }
+}
+
+:where(a, button, [tabindex], input, select):focus-visible {
+  outline: 2px solid var(--color-fpt-blue);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media print {
+  .ambient,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  [data-card] {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}

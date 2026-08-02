@@ -7,9 +7,9 @@ delegates to the engine interface, so swapping the mock for OR-Tools needs no ro
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status  # type: ignore[import-not-found]
-from pydantic import BaseModel  # type: ignore[import-not-found]
+from pydantic import AliasChoices, BaseModel, Field  # type: ignore[import-not-found]
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..domain.models import Constraints, Project, Skill, Student, FormationRun, Team
 from ..matching.engine import MatchingEngine
@@ -91,8 +91,9 @@ async def run_formation(
         seed=body.seed,
         status=formation.status,
         balance=formation.balance,
-        created_at=datetime.utcnow(),
-        teams=formation.teams
+        created_at=datetime.now(timezone.utc),
+        teams=formation.teams,
+        unassignable=formation.unassignable,
     )
     cohorts.save_formation_run(run_data)
     cohorts.log_audit_event(cohort_id, principal.user_id, "run_formation", f"formation_id={run_id}")
@@ -130,18 +131,29 @@ async def get_formation(
         "id": run.id,
         "cohort_id": run.cohort_id,
         "status": run.status,
+        "seed": run.seed,
         "balance": run.balance,
         "teams": [
-            {"id": t.id, "members": t.member_ids, "scores": t.scores, "rationale": t.rationale}
+            {
+                "id": t.id,
+                "members": t.member_ids,
+                "scores": t.scores,
+                "rationale": t.rationale,
+                "overridden": t.overridden,
+            }
             for t in run.teams
-        ]
+        ],
+        "unassignable": run.unassignable,
     }
 
 class OverrideTeamIn(BaseModel):
     id: str
-    member_ids: list[str]
+    # Run/read responses emit this as "members"; accept either so a client can post
+    # back the exact team object it was given without renaming fields.
+    member_ids: list[str] = Field(validation_alias=AliasChoices("member_ids", "members"))
     name: str = ""
     rationale: str = ""
+    scores: dict[str, float] | None = None
 
 class OverrideFormationIn(BaseModel):
     teams: list[OverrideTeamIn]
@@ -161,7 +173,24 @@ async def override_formation(
     if not cohort or cohort.owner_id != principal.user_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not the cohort owner")
         
-    teams = [Team(id=t.id, member_ids=t.member_ids, rationale=t.rationale) for t in body.teams]
+    # Carry the solver's metrics forward: an override that omits scores must not
+    # silently wipe the explainability data the review board reads.
+    stored = {t.id: t for t in run.teams}
+    teams = [
+        Team(
+            id=t.id,
+            member_ids=t.member_ids,
+            rationale=t.rationale,
+            scores=t.scores if t.scores is not None else getattr(stored.get(t.id), "scores", {}),
+            # Amendment is sticky: a team stays marked once a lecturer has touched
+            # it, so the record keeps showing it was changed by hand.
+            overridden=(
+                getattr(stored.get(t.id), "overridden", False)
+                or getattr(stored.get(t.id), "member_ids", t.member_ids) != t.member_ids
+            ),
+        )
+        for t in body.teams
+    ]
     cohorts.update_formation_run_teams(formation_id, teams)
     cohorts.log_audit_event(run.cohort_id, principal.user_id, "save_override", f"formation_id={formation_id}")
     return {"status": "ok"}
