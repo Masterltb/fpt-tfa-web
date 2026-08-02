@@ -51,9 +51,18 @@ class TestE2EPlatformWorkflow(unittest.TestCase):
         self.assertEqual(res_dna.status_code, 200)
         self.assertEqual(res_dna.json()["data"]["completion_percentage"], 100)
 
+        # Step 2.5: Lecturer creates Grouping Session
+        res_sess = self.client.post(
+            "/api/v1/grouping-sessions",
+            headers=self.lecturer_headers,
+            json={"class_section_id": "sec-se1701", "name": "Capstar Team Formation - Fall 2026"}
+        )
+        self.assertEqual(res_sess.status_code, 201)
+        session_id = res_sess.json()["data"]["id"]
+
         # Step 3: Student creates team and invites teammate
         res_team = self.client.post(
-            "/api/v1/grouping-sessions/sess-fall26-01/teams",
+            f"/api/v1/grouping-sessions/{session_id}/teams",
             headers=self.student_headers,
             json={"name": "End-to-End Alpha", "project_topic": "Capstar Matching"}
         )
@@ -69,7 +78,7 @@ class TestE2EPlatformWorkflow(unittest.TestCase):
 
         # Step 4: Lecturer triggers AI matching job
         res_match = self.client.post(
-            "/api/v1/grouping-sessions/sess-fall26-01/match-runs",
+            f"/api/v1/grouping-sessions/{session_id}/match-runs",
             headers=self.lecturer_headers,
             json={"seed": 100, "time_limit_seconds": 3.0}
         )
@@ -80,7 +89,7 @@ class TestE2EPlatformWorkflow(unittest.TestCase):
         res_apply = self.client.post(f"/api/v1/match-runs/{run_id}/apply", headers=self.lecturer_headers)
         self.assertEqual(res_apply.status_code, 200)
 
-        res_pub = self.client.post("/api/v1/grouping-sessions/sess-fall26-01/publish", headers=self.lecturer_headers)
+        res_pub = self.client.post(f"/api/v1/grouping-sessions/{session_id}/publish", headers=self.lecturer_headers)
         self.assertEqual(res_pub.status_code, 200)
         self.assertEqual(res_pub.json()["data"]["status"], "PUBLISHED")
 

@@ -9,13 +9,13 @@ from __future__ import annotations
 import json
 import uuid
 from typing import Any
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import Principal, require_lecturer, require_student
 from app.infra.database import get_db
-from app.infra.db_models import GroupingSessionRow
+from app.infra.db_models import GroupingSessionRow, TeamDNARow, UserRow, TeamMemberRow, TeamRow, ClassSectionRow
 from app.domain.models import GroupingMode, GroupingSessionStatus
 
 router = APIRouter(prefix="/api/v1/grouping-sessions", tags=["Grouping Sessions"])
@@ -44,21 +44,6 @@ class SessionPatchPayload(BaseModel):
     allow_cross_major: bool | None = None
 
 
-_sessions_db: list[dict[str, Any]] = [
-    {
-        "id": "sess-fall26-01",
-        "class_section_id": "sec-se1701",
-        "name": "Capstar Team Formation - Fall 2026",
-        "mode": "HYBRID",
-        "team_min_size": 4,
-        "team_max_size": 5,
-        "required_roles": ["leader", "backend", "frontend", "qa"],
-        "status": "OPEN",
-        "created_by": "lec-001"
-    }
-]
-
-
 # ---------------------------------------------------------------------------
 # Session CRUD Endpoints
 # ---------------------------------------------------------------------------
@@ -79,8 +64,6 @@ async def list_sessions(db: Session = Depends(get_db), principal: Principal = De
         }
         for r in rows
     ]
-    if not sessions:
-        sessions = _sessions_db
     return {"data": sessions, "meta": {"total": len(sessions)}}
 
 
@@ -116,35 +99,25 @@ async def create_session(
         "status": db_item.status.value if hasattr(db_item.status, 'value') else str(db_item.status),
         "created_by": principal.user_id,
     }
-    _sessions_db.append(item)
     return {"data": item}
 
 
 @router.get("/{session_id}")
 async def get_session(session_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:
     row = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
-    if row:
-        return {
-            "data": {
-                "id": row.id,
-                "class_section_id": row.class_section_id,
-                "name": row.name,
-                "mode": row.mode.value if hasattr(row.mode, 'value') else str(row.mode),
-                "status": row.status.value if hasattr(row.status, 'value') else str(row.status),
-                "team_min_size": row.team_min_size,
-                "team_max_size": row.team_max_size,
-            }
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    return {
+        "data": {
+            "id": row.id,
+            "class_section_id": row.class_section_id,
+            "name": row.name,
+            "mode": row.mode.value if hasattr(row.mode, 'value') else str(row.mode),
+            "status": row.status.value if hasattr(row.status, 'value') else str(row.status),
+            "team_min_size": row.team_min_size,
+            "team_max_size": row.team_max_size,
         }
-    sess = next((s for s in _sessions_db if s["id"] == session_id), None)
-    if not sess:
-        sess = {
-            "id": session_id,
-            "name": "Team Formation Session",
-            "class_section_id": "sec_se1801_swe201c",
-            "status": "OPEN",
-            "mode": "HYBRID"
-        }
-    return {"data": sess}
+    }
 
 
 @router.patch("/{session_id}")
@@ -155,66 +128,103 @@ async def patch_session(
     principal: Principal = Depends(require_lecturer)
 ) -> dict[str, Any]:
     row = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
-    if row:
-        if payload.name is not None:
-            row.name = payload.name
-        if payload.team_min_size is not None:
-            row.team_min_size = payload.team_min_size
-        if payload.team_max_size is not None:
-            row.team_max_size = payload.team_max_size
-        db.commit()
-        db.refresh(row)
-        return {
-            "data": {
-                "id": row.id,
-                "name": row.name,
-                "status": row.status.value if hasattr(row.status, 'value') else str(row.status)
-            }
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    if payload.name is not None:
+        row.name = payload.name
+    if payload.team_min_size is not None:
+        row.team_min_size = payload.team_min_size
+    if payload.team_max_size is not None:
+        row.team_max_size = payload.team_max_size
+        
+    db.commit()
+    db.refresh(row)
+    
+    return {
+        "data": {
+            "id": row.id,
+            "name": row.name,
+            "status": row.status.value if hasattr(row.status, 'value') else str(row.status)
         }
-    sess = next((s for s in _sessions_db if s["id"] == session_id), None)
-    if not sess:
-        sess = {"id": session_id, "name": payload.name or "Session", "status": "OPEN"}
-    return {"data": sess}
+    }
 
 
 @router.delete("/{session_id}")
 async def delete_session(session_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
     row = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
-    if row:
-        db.delete(row)
-        db.commit()
-    global _sessions_db
-    _sessions_db = [s for s in _sessions_db if s["id"] != session_id]
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    db.delete(row)
+    db.commit()
     return {"data": {"message": "Grouping session deleted"}}
 
 
 @router.get("/{session_id}/participants")
 async def get_session_participants(
     session_id: str,
+    db: Session = Depends(get_db),
     principal: Principal = Depends(require_lecturer)
 ) -> dict[str, Any]:
-    participants = [
-        {"student_id": "stu-001", "name": "Nguyen Van A", "dna_status": "SUBMITTED", "team_id": "team-01"},
-        {"student_id": "stu-002", "name": "Tran Thi B", "dna_status": "SUBMITTED", "team_id": "team-01"},
-        {"student_id": "stu-003", "name": "Le Van C", "dna_status": "SUBMITTED", "team_id": None},
-        {"student_id": "stu-004", "name": "Pham Van D", "dna_status": "PENDING", "team_id": None},
-    ]
+    sess = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
+    if not sess:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    # Get students who submitted DNA for this section
+    dnas = db.query(TeamDNARow).filter(TeamDNARow.class_section_id == sess.class_section_id).all()
+    
+    participants = []
+    for dna in dnas:
+        user = db.query(UserRow).filter(UserRow.id == dna.student_id).first()
+        if not user:
+            continue
+            
+        # Check if student is in a team for this session
+        member = db.query(TeamMemberRow).join(TeamRow, TeamRow.id == TeamMemberRow.team_id).filter(
+            TeamMemberRow.student_id == user.id,
+            TeamRow.session_id == session_id
+        ).first()
+        
+        participants.append({
+            "student_id": user.id,
+            "name": user.display_name,
+            "dna_status": "SUBMITTED" if dna.completion_percentage > 0 else "PENDING",
+            "team_id": member.team_id if member else None
+        })
+        
     return {"data": participants, "meta": {"total": len(participants)}}
 
 
 @router.get("/{session_id}/readiness")
 async def get_session_readiness(
     session_id: str,
+    db: Session = Depends(get_db),
     principal: Principal = Depends(require_lecturer)
 ) -> dict[str, Any]:
+    sess = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
+    if not sess:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    sec = db.query(ClassSectionRow).filter(ClassSectionRow.id == sess.class_section_id).first()
+    total_students = sec.capacity if sec else 40
+    
+    dnas = db.query(TeamDNARow).filter(TeamDNARow.class_section_id == sess.class_section_id).all()
+    submitted_dna_count = sum(1 for d in dnas if d.completion_percentage > 0)
+    
+    assigned_count = db.query(TeamMemberRow).join(TeamRow).filter(TeamRow.session_id == session_id).count()
+    unassigned_count = max(0, total_students - assigned_count)
+    
+    readiness_percentage = (submitted_dna_count / total_students * 100) if total_students > 0 else 0
+    
     return {
         "data": {
             "session_id": session_id,
-            "total_students": 40,
-            "submitted_dna_count": 36,
-            "unassigned_students_count": 8,
-            "readiness_percentage": 90.0,
-            "can_start_matching": True
+            "total_students": total_students,
+            "submitted_dna_count": submitted_dna_count,
+            "unassigned_students_count": unassigned_count,
+            "readiness_percentage": round(readiness_percentage, 1),
+            "can_start_matching": readiness_percentage >= 50.0
         }
     }
 
@@ -226,48 +236,53 @@ async def get_session_readiness(
 @router.post("/{session_id}/open")
 async def open_session(session_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
     row = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
-    if row:
-        row.status = GroupingSessionStatus.OPEN
-        db.commit()
-        return {"data": {"id": row.id, "status": "OPEN"}}
-    return {"data": {"id": session_id, "status": "OPEN"}}
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    row.status = GroupingSessionStatus.OPEN
+    db.commit()
+    return {"data": {"id": row.id, "status": "OPEN"}}
 
 
 @router.post("/{session_id}/freeze")
 async def freeze_session(session_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
     row = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
-    if row:
-        row.status = GroupingSessionStatus.FROZEN
-        db.commit()
-        return {"data": {"id": row.id, "status": "FROZEN"}}
-    return {"data": {"id": session_id, "status": "FROZEN"}}
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    row.status = GroupingSessionStatus.FROZEN
+    db.commit()
+    return {"data": {"id": row.id, "status": "FROZEN"}}
 
 
 @router.post("/{session_id}/reopen")
 async def reopen_session(session_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
     row = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
-    if row:
-        row.status = GroupingSessionStatus.OPEN
-        db.commit()
-        return {"data": {"id": row.id, "status": "OPEN"}}
-    return {"data": {"id": session_id, "status": "OPEN"}}
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    row.status = GroupingSessionStatus.OPEN
+    db.commit()
+    return {"data": {"id": row.id, "status": "OPEN"}}
 
 
 @router.post("/{session_id}/cancel")
 async def cancel_session(session_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
     row = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
-    if row:
-        row.status = GroupingSessionStatus.CLOSED
-        db.commit()
-        return {"data": {"id": row.id, "status": "CANCELLED"}}
-    return {"data": {"id": session_id, "status": "CANCELLED"}}
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    row.status = GroupingSessionStatus.CLOSED
+    db.commit()
+    return {"data": {"id": row.id, "status": "CLOSED"}}
 
 
 @router.post("/{session_id}/publish")
 async def publish_session(session_id: str, db: Session = Depends(get_db), principal: Principal = Depends(require_lecturer)) -> dict[str, Any]:
     row = db.query(GroupingSessionRow).filter(GroupingSessionRow.id == session_id).first()
-    if row:
-        row.status = GroupingSessionStatus.PUBLISHED
-        db.commit()
-        return {"data": {"id": row.id, "status": "PUBLISHED", "message": "Teams published successfully"}}
-    return {"data": {"id": session_id, "status": "PUBLISHED", "message": "Teams published successfully"}}
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        
+    row.status = GroupingSessionStatus.PUBLISHED
+    db.commit()
+    return {"data": {"id": row.id, "status": "PUBLISHED", "message": "Teams published successfully"}}
