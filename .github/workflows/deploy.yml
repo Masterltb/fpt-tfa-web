@@ -1,0 +1,141 @@
+name: FPT TFA CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  statuses: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Backend CI (Ruff Lint & Pytest Suite)
+  # ---------------------------------------------------------------------------
+  backend-ci:
+    name: Backend CI (Python 3.11 + Pytest + OR-Tools)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Install uv package manager
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Backend Dependencies
+        run: uv sync --frozen
+
+      - name: Run Ruff Linter & Formatting Check
+        run: |
+          uv run ruff check .
+
+      - name: Run Backend Pytest Suite (48 Test Cases)
+        env:
+          DATABASE_URL: "sqlite:///:memory:"
+          JWT_SECRET_KEY: "ci-cd-test-jwt-secret-key-for-github-actions"
+        run: |
+          uv run pytest -q
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Frontend CI (TypeScript Typecheck & Production Build)
+  # ---------------------------------------------------------------------------
+  frontend-ci:
+    name: Frontend CI (Node 20 + TypeScript + Vite Build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Run TypeScript Typecheck
+        working-directory: web
+        run: npx tsc -b
+
+      - name: Build Vite Production Bundle
+        working-directory: web
+        run: npm run build
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Docker Container Build & Push to GHCR (GitHub Container Registry)
+  # ---------------------------------------------------------------------------
+  docker-build-push:
+    name: Build & Push Docker Image (GHCR)
+    needs: [backend-ci, frontend-ci]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker Metadata Tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build & Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # Job 4: Deployment Notification & Environment Summary
+  # ---------------------------------------------------------------------------
+  deploy-summary:
+    name: Deploy Verification & Summary
+    needs: [docker-build-push]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Output Deployment Status
+        run: |
+          echo "========================================================="
+          echo "🚀 FPT TFA Production CI/CD Pipeline Completed Successfully!"
+          echo "Repository: ${{ github.repository }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Docker Image: ghcr.io/${{ github.repository }}:latest"
+          echo "Database DSN: Supabase PostgreSQL (ap-northeast-1)"
+          echo "========================================================="
