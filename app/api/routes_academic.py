@@ -182,6 +182,18 @@ async def list_my_lecturer_sections(principal: Principal = Depends(require_lectu
             "activeSessionStatus": "OPEN",
             "activeGroupingMode": "LECTURER_LED",
         },
+        {
+            "id": "sec_se1803_swp391",
+            "sectionCode": "SE1803",
+            "courseCode": "SWP391",
+            "courseName": "Application Development Project",
+            "termId": "term_fall2026",
+            "lecturerId": principal.user_id,
+            "lecturerName": "TS. Nguyễn Văn Hùng",
+            "studentCount": 40,
+            "dnaCompletionRate": 75,
+            "activeSessionStatus": "DRAFT",
+        },
     ]
     return {"data": sections}
 

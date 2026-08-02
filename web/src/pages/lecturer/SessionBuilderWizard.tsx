@@ -38,13 +38,19 @@ export function SessionBuilderWizard() {
   });
 
   const handleLaunch = () => {
+    const sectionId = selectedSectionCode.includes('SE1801')
+      ? 'sec_se1801_swe201c'
+      : selectedSectionCode.includes('SE1802')
+      ? 'sec_se1802_prj301'
+      : 'sec_se1803_swp391';
+
     mutation.mutate({
-      sectionCode: selectedSectionCode,
+      class_section_id: sectionId,
+      name: `Phiên Ghép Nhóm ${selectedSectionCode}`,
       mode,
-      minTeamSize: minSize,
-      maxTeamSize: maxSize,
-      targetTeamSize: targetSize,
-      skillWeights: {
+      team_min_size: minSize,
+      team_max_size: maxSize,
+      weights: {
         skillBalance: weightSkillBalance,
         scheduleOverlap: weightScheduleOverlap,
         roleCoverage: weightRoleCoverage,

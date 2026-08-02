@@ -32,12 +32,13 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     // Unwraps success envelope data if present
-    return response.data?.data !== undefined ? response.data : response;
+    return response.data?.data !== undefined ? response.data.data : response.data;
   },
   (error: AxiosError<ApiErrorResponse>) => {
     if (!error.response) {
       // Offline Dev/E2E Fallback Provider: Return simulated mock responses when backend server is offline
       const url = error.config?.url || '';
+      console.warn(`[API Client] Mocking response for: ${url}`);
       if (url.includes('/admin/system/overview')) {
         return Promise.resolve({
           activeTerm: 'Fall 2026',

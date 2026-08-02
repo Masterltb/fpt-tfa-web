@@ -31,9 +31,19 @@ _audit_logs_db: list[dict[str, Any]] = [
         "id": 1,
         "cohort_id": "cohort-01",
         "user_id": "lec-001",
-        "action": "CREATE_GROUPING_SESSION",
-        "payload": "{\"session_id\": \"sess-fall26-01\"}",
+        "user_role": "LECTURER",
+        "action": "PUBLISH_TEAMS_OVERRIDE",
+        "payload": "{\"session_id\": \"sess-fall26-01\", \"teams_count\": 8}",
         "timestamp": "2026-08-01T10:00:00Z"
+    },
+    {
+        "id": 2,
+        "cohort_id": "cohort-01",
+        "user_id": "adm-001",
+        "user_role": "ADMIN",
+        "action": "IMPORT_ROSTER_EXCEL",
+        "payload": "{\"file\": \"SWE201c_Roster.xlsx\", \"rows\": 36}",
+        "timestamp": "2026-08-01T11:30:00Z"
     }
 ]
 
@@ -170,6 +180,34 @@ async def get_lecturer_dashboard_report(principal: Principal = Depends(require_l
 async def export_teams_csv(session_id: str, principal: Principal = Depends(require_lecturer)) -> Response:
     csv_data = "team_id,team_name,student_id,student_name,role\nteam-1,Team Alpha,stu-001,Nguyen Van A,Leader\nteam-1,Team Alpha,stu-002,Tran Thi B,Member\n"
     return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=session_{session_id}_teams.csv"})
+
+
+@router.get("/grouping-sessions/{session_id}/recommendations")
+async def get_session_student_recommendations(session_id: str, principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    recs = [
+        {
+            "targetStudentId": "stu-101",
+            "targetStudentName": "Trần Thị Minh Anh",
+            "matchScore": 94,
+            "complementarySkills": ["Node.js", "Docker", "PostgreSQL"],
+            "reasons": [
+                "Bổ trợ trực tiếp kỹ năng Backend & Database cho nhóm của bạn",
+                "Trùng khớp 85% lịch rảnh vào buổi tối thứ 3, 5, 7",
+                "Cùng định hướng mục tiêu điểm số A/A+"
+            ]
+        },
+        {
+            "targetStudentId": "stu-102",
+            "targetStudentName": "Lê Hoàng Nam",
+            "matchScore": 89,
+            "complementarySkills": ["UI/UX Design", "Figma", "TailwindCSS"],
+            "reasons": [
+                "Bổ sung vị trí Designer duy nhất còn thiếu trong nhóm",
+                "Trùng khớp 90% thời gian làm việc nhóm trực tuyến"
+            ]
+        }
+    ]
+    return {"data": recs, "meta": {"total": len(recs)}}
 
 
 @router.get("/match-runs/{run_id}/recommendations")

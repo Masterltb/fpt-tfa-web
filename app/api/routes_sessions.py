@@ -22,11 +22,11 @@ router = APIRouter(prefix="/api/v1/grouping-sessions", tags=["Grouping Sessions"
 # ---------------------------------------------------------------------------
 
 class SessionCreatePayload(BaseModel):
-    class_section_id: str
-    name: str
+    class_section_id: str = Field(default="sec_se1801_swe201c")
+    name: str = Field(default="Phiên Ghép Nhóm Mới")
     mode: GroupingMode = GroupingMode.HYBRID
     team_min_size: int = Field(default=4, ge=1)
-    team_max_size: int = Field(default=5, ge=1)
+    team_max_size: int = Field(default=6, ge=1)
     required_roles: list[str] = Field(default_factory=list)
     required_skills: list[str] = Field(default_factory=list)
     allow_cross_major: bool = True

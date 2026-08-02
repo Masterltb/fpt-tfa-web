@@ -13,7 +13,7 @@ test.describe('Admin Portal E2E Flow', () => {
 
     await expect(page.locator('text=/Bảng Điều Khiển Quản Trị Toàn Trường/')).toBeVisible();
     await expect(page.locator('text=Fall 2026')).toBeVisible();
-    await expect(page.locator('text=/5 Campuses/')).toBeVisible();
+    await expect(page.locator('text=5 Cơ sở')).toBeVisible();
     await expect(page.locator('text=/4,850|4\\.850/')).toBeVisible();
 
     // Check System Health badge
