@@ -12,6 +12,9 @@ from pydantic import BaseModel
 
 from app.api.deps import Principal, require_admin, require_student, require_lecturer
 from app.services.csv_importer import parse_csv_roster
+from sqlalchemy.orm import Session
+from app.infra.database import get_db
+from app.infra.db_models import ClassSectionRow, CourseRow, GroupingSessionRow
 
 router = APIRouter(prefix="/api/v1", tags=["Academic Catalogs & Sections"])
 
@@ -149,11 +152,6 @@ async def create_skill(payload: SkillCatalogPayload, _admin: Principal = Depends
 @router.get("/sections")
 async def list_sections() -> dict[str, Any]:
     return {"data": _sections_db}
-
-
-from sqlalchemy.orm import Session
-from app.infra.database import get_db
-from app.infra.db_models import ClassSectionRow, CourseRow, GroupingSessionRow
 
 
 @router.get("/lecturers/me/sections")

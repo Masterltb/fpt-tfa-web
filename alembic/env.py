@@ -7,13 +7,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from alembic import context
-from sqlalchemy import engine_from_config, pool
+from alembic import context  # noqa: E402
+from sqlalchemy import engine_from_config, pool  # noqa: E402
 
 # Import our base and all DB models so Alembic can detect them for autogenerate
-from app.infra.database import Base, format_database_url  # noqa: F401
-import app.infra.db_models  # noqa: F401
-import app.infra.db  # noqa: F401
+from app.infra.database import Base, format_database_url  # noqa: F401, E402
+import app.infra.db_models  # noqa: F401, E402
+import app.infra.db  # noqa: F401, E402
 
 config = context.config
 

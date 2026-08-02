@@ -34,8 +34,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Backend Dependencies
-        run: uv sync --frozen
+      - name: Install Backend Dependencies (including Dev extras: ruff, pytest)
+        run: uv sync --all-extras
 
       - name: Run Ruff Linter & Formatting Check
         run: |

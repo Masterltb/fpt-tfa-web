@@ -11,6 +11,10 @@ from pydantic import BaseModel
 
 from app.api.deps import require_admin
 from app.services.csv_importer import parse_csv_roster, ImportSummary
+from sqlalchemy.orm import Session
+from app.infra.database import get_db
+from app.infra.db_models import CampusRow, CourseRow, ClassSectionRow, UserRow, GroupingSessionRow, AuditEventRow
+from app.domain.models import UserRole
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Admin"])
 
@@ -100,11 +104,6 @@ _class_sections: list[dict[str, Any]] = [
 # ---------------------------------------------------------------------------
 # Campus Endpoints
 # ---------------------------------------------------------------------------
-
-from sqlalchemy.orm import Session
-from app.infra.database import get_db
-from app.infra.db_models import CampusRow, CourseRow, ClassSectionRow, UserRow, GroupingSessionRow
-from app.domain.models import UserRole
 
 
 @router.get("/system/overview")

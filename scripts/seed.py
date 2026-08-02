@@ -22,12 +22,12 @@ load_dotenv()
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.infra.database import engine, SessionLocal, Base
-from app.infra.db_models import (
+from app.infra.database import engine, SessionLocal, Base  # noqa: E402
+from app.infra.db_models import (  # noqa: E402
     UserRow, CampusRow, TermRow, CourseRow, MajorRow, ProgramRow, ClassSectionRow,
     GroupingSessionRow, TeamDNARow, TeamRow, TeamMemberRow, AuditEventRow
 )
-from app.domain.models import UserRole, UserStatus, GroupingMode, GroupingSessionStatus, CommitmentLevel, TeamStatus
+from app.domain.models import UserRole, UserStatus, GroupingMode, GroupingSessionStatus, CommitmentLevel, TeamStatus  # noqa: E402
 
 
 def seed() -> None:

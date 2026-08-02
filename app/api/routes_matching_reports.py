@@ -10,7 +10,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from pydantic import BaseModel
 
+from sqlalchemy.orm import Session
+
 from app.api.deps import Principal, require_admin, require_lecturer, require_student, get_engine, current_principal
+from app.infra.database import get_db
+from app.infra.db_models import AuditEventRow
 from app.matching.engine import MatchingEngine
 
 router = APIRouter(prefix="/api/v1", tags=["Matching, Review Board, Reports & Audit"])
@@ -275,11 +279,6 @@ async def get_session_reports_summary(session_id: str, principal: Principal = De
 async def export_roster_csv(section_id: str, principal: Principal = Depends(require_lecturer)) -> Response:
     csv_data = "student_id,student_code,name,email\nstu-001,SE170001,Nguyen Van A,anv@fpt.edu.vn\n"
     return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=roster_{section_id}.csv"})
-
-
-from sqlalchemy.orm import Session
-from app.infra.database import get_db
-from app.infra.db_models import AuditEventRow
 
 
 @router.get("/audit-logs")

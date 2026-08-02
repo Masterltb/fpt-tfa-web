@@ -5,12 +5,16 @@ RFC 7807 compliance & RBAC enforced (docs/rbac.md & docs/api-contract.md).
 """
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from app.api.deps import Principal, require_student
+from app.infra.database import get_db
+from app.infra.db_models import TeamDNARow
 from app.domain.models import CommitmentLevel
 
 router = APIRouter(prefix="/api/v1/students/me", tags=["Student DNA & Dashboard"])
@@ -75,12 +79,6 @@ _student_experiences: dict[str, list[dict[str, Any]]] = {}
 # ---------------------------------------------------------------------------
 # Student Dashboard & Readiness Endpoints
 # ---------------------------------------------------------------------------
-
-import json
-from sqlalchemy.orm import Session
-from app.infra.database import get_db
-from app.infra.db_models import TeamDNARow, ClassSectionRow, GroupingSessionRow
-
 
 @router.get("/dashboard")
 async def get_student_dashboard(db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:

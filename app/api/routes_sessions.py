@@ -6,13 +6,17 @@ RFC 7807 compliance & RBAC enforced (docs/rbac.md & docs/api-contract.md).
 """
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from app.api.deps import Principal, require_lecturer, require_student
-from app.domain.models import GroupingMode
+from app.infra.database import get_db
+from app.infra.db_models import GroupingSessionRow
+from app.domain.models import GroupingMode, GroupingSessionStatus
 
 router = APIRouter(prefix="/api/v1/grouping-sessions", tags=["Grouping Sessions"])
 
@@ -58,13 +62,6 @@ _sessions_db: list[dict[str, Any]] = [
 # ---------------------------------------------------------------------------
 # Session CRUD Endpoints
 # ---------------------------------------------------------------------------
-
-import json
-from sqlalchemy.orm import Session
-from app.infra.database import get_db
-from app.infra.db_models import GroupingSessionRow
-from app.domain.models import GroupingSessionStatus
-
 
 @router.get("")
 async def list_sessions(db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:
