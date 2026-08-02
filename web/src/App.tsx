@@ -177,23 +177,6 @@ function LoginPage() {
   );
 }
 
-// Screen 20: Lecturer Dashboard Placeholder
-function LecturerDashboard() {
-  return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Lecturer Dashboard (Screen 20)</h1>
-          <p className="text-xs text-slate-500">Chào mừng Giảng viên (ID: {localStorage.getItem('tfa_user_id') || 'lec_01'})</p>
-        </div>
-        <div className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
-          Human-in-the-Loop Mode
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Screen 29: Admin Dashboard Placeholder
 function AdminDashboard() {
   return (
@@ -216,6 +199,11 @@ import { TeamDnaWizard } from './pages/student/TeamDnaWizard';
 import { ClassSectionWorkspace } from './pages/student/ClassSectionWorkspace';
 import { AiRecommendations } from './pages/student/AiRecommendations';
 
+import { LecturerDashboard } from './pages/lecturer/LecturerDashboard';
+import { SessionBuilderWizard } from './pages/lecturer/SessionBuilderWizard';
+import { AiMatchingRunProgress } from './pages/lecturer/AiMatchingRunProgress';
+import { DragDropOverrideStudio } from './pages/lecturer/DragDropOverrideStudio';
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -229,6 +217,9 @@ export default function App() {
           <Route path="/student/sections/:sectionId" element={<ClassSectionWorkspace />} />
           <Route path="/student/sections/:sectionId/recommendations" element={<AiRecommendations />} />
           <Route path="/lecturer/dashboard" element={<LecturerDashboard />} />
+          <Route path="/lecturer/sessions/new" element={<SessionBuilderWizard />} />
+          <Route path="/lecturer/sessions/:sessionId/matching" element={<AiMatchingRunProgress />} />
+          <Route path="/lecturer/sessions/:sessionId/override" element={<DragDropOverrideStudio />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="*" element={<LandingPage />} />
         </Routes>
