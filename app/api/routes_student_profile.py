@@ -76,25 +76,32 @@ _student_experiences: dict[str, list[dict[str, Any]]] = {}
 # Student Dashboard & Readiness Endpoints
 # ---------------------------------------------------------------------------
 
+import json
+from sqlalchemy.orm import Session
+from app.infra.database import get_db
+from app.infra.db_models import TeamDNARow, ClassSectionRow, GroupingSessionRow
+
+
 @router.get("/dashboard")
-async def get_student_dashboard(principal: Principal = Depends(require_student)) -> dict[str, Any]:
-    dna = _student_dnas.get(principal.user_id, {})
-    completion = dna.get("completion_percentage", 65)
+async def get_student_dashboard(db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    row = db.query(TeamDNARow).filter(TeamDNARow.student_id == principal.user_id).first()
+    completion = row.completion_percentage if row else 90
 
     return {
         "data": {
             "student_id": principal.user_id,
             "active_session": {
-                "id": "sess-fall26-01",
-                "name": "Capstar Team Formation - Fall 2026",
-                "course_code": "PRN232",
-                "section_code": "SE1701",
+                "id": "sess_01_se1801",
+                "name": "Team Formation - SWE201c Fall 2026",
+                "course_code": "SWE201c",
+                "section_code": "SE1801",
                 "mode": "HYBRID",
                 "status": "OPEN",
                 "deadline": "2026-09-15T23:59:59Z"
             },
             "my_team": None,
             "profile_readiness": completion,
+            "completenessScore": completion,
             "pending_invitations_count": 1
         }
     }
@@ -104,28 +111,28 @@ async def get_student_dashboard(principal: Principal = Depends(require_student))
 async def get_student_sections(principal: Principal = Depends(require_student)) -> dict[str, Any]:
     sections = [
         {
-            "id": "sec-se1701",
-            "code": "SE1701",
-            "course_id": "crs-prn232",
-            "course_code": "PRN232",
-            "course_name": "C# & .NET Enterprise Applications",
-            "term_id": "term-fall26",
+            "id": "sec_se1801_swe201c",
+            "code": "SE1801",
+            "course_id": "crs_swe201c",
+            "course_code": "SWE201c",
+            "course_name": "Introduction to Software Engineering",
+            "term_id": "term_fall2026",
             "status": "ACTIVE"
         }
     ]
     return {"data": sections, "meta": {"total": len(sections)}}
 
 
-
 @router.get("/profile-readiness")
-async def get_profile_readiness(principal: Principal = Depends(require_student)) -> dict[str, Any]:
-    dna = _student_dnas.get(principal.user_id, {})
-    score = dna.get("completion_percentage", 65)
+async def get_profile_readiness(db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:
+    row = db.query(TeamDNARow).filter(TeamDNARow.student_id == principal.user_id).first()
+    score = row.completion_percentage if row else 90
     return {
         "data": {
             "readiness_score": score,
+            "completenessScore": score,
             "is_complete": score >= 80,
-            "missing_sections": ["working_preferences"] if score < 80 else []
+            "missing_sections": [] if score >= 80 else ["working_preferences"]
         }
     }
 
@@ -133,12 +140,6 @@ async def get_profile_readiness(principal: Principal = Depends(require_student))
 # ---------------------------------------------------------------------------
 # Team DNA Endpoints
 # ---------------------------------------------------------------------------
-
-import json
-from sqlalchemy.orm import Session
-from app.infra.database import get_db
-from app.infra.db_models import TeamDNARow, ClassSectionRow, GroupingSessionRow
-
 
 @router.get("/team-profile")
 async def get_team_profile(db: Session = Depends(get_db), principal: Principal = Depends(require_student)) -> dict[str, Any]:
@@ -150,11 +151,15 @@ async def get_team_profile(db: Session = Depends(get_db), principal: Principal =
             "class_section_id": row.class_section_id,
             "skills": json.loads(row.skills_json) if row.skills_json else [],
             "preferred_roles": json.loads(row.preferred_roles_json) if row.preferred_roles_json else [],
+            "preferredRoles": json.loads(row.preferred_roles_json) if row.preferred_roles_json else [],
             "experience_years": row.experience_years,
             "availability": json.loads(row.availability_json) if row.availability_json else [],
+            "availableTimeSlots": json.loads(row.availability_json) if row.availability_json else [],
             "interests": json.loads(row.interests_json) if row.interests_json else [],
             "commitment_level": row.commitment_level.value if hasattr(row.commitment_level, 'value') else str(row.commitment_level),
-            "completion_percentage": row.completion_percentage
+            "commitmentLevel": row.commitment_level.value if hasattr(row.commitment_level, 'value') else str(row.commitment_level),
+            "completion_percentage": row.completion_percentage,
+            "completenessScore": row.completion_percentage,
         }
     else:
         dna = {
@@ -163,11 +168,15 @@ async def get_team_profile(db: Session = Depends(get_db), principal: Principal =
             "class_section_id": "sec_se1801_swe201c",
             "skills": [{"name": "Python", "proficiency": 4}, {"name": "React", "proficiency": 3}],
             "preferred_roles": ["backend", "leader"],
+            "preferredRoles": ["backend", "leader"],
             "experience_years": 1.0,
             "availability": ["MON_AM", "TUE_PM", "THU_PM"],
+            "availableTimeSlots": ["MON_AM", "TUE_PM", "THU_PM"],
             "interests": ["AI", "Web Development"],
             "commitment_level": "HIGH",
-            "completion_percentage": 90
+            "commitmentLevel": "HIGH",
+            "completion_percentage": 90,
+            "completenessScore": 90,
         }
     return {"data": dna}
 

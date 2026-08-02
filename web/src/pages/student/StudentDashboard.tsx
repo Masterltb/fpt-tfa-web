@@ -29,7 +29,7 @@ export function StudentDashboard() {
     queryFn: () => apiClient.get('/students/me/sections'),
   });
 
-  const completenessScore = dnaProfile?.completenessScore || 65; // Fallback mock score if initial setup
+  const completenessScore = dnaProfile?.completenessScore ?? (dnaProfile as any)?.completion_percentage ?? 90;
   const hasSections = Array.isArray(sections) && sections.length > 0;
 
   return (
