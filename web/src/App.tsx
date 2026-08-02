@@ -177,23 +177,6 @@ function LoginPage() {
   );
 }
 
-// Screen 29: Admin Dashboard Placeholder
-function AdminDashboard() {
-  return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard (Screen 29)</h1>
-          <p className="text-xs text-slate-500">Quản trị toàn trường (ID: {localStorage.getItem('tfa_user_id') || 'adm_01'})</p>
-        </div>
-        <div className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-          System Analytics
-        </div>
-      </div>
-    </div>
-  );
-}
-
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { TeamDnaWizard } from './pages/student/TeamDnaWizard';
 import { ClassSectionWorkspace } from './pages/student/ClassSectionWorkspace';
@@ -203,6 +186,11 @@ import { LecturerDashboard } from './pages/lecturer/LecturerDashboard';
 import { SessionBuilderWizard } from './pages/lecturer/SessionBuilderWizard';
 import { AiMatchingRunProgress } from './pages/lecturer/AiMatchingRunProgress';
 import { DragDropOverrideStudio } from './pages/lecturer/DragDropOverrideStudio';
+
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { RosterImportWizard } from './pages/admin/RosterImportWizard';
+import { ConstitutionGuardrailEditor } from './pages/admin/ConstitutionGuardrailEditor';
+import { AuditLogViewer } from './pages/admin/AuditLogViewer';
 
 export default function App() {
   return (
@@ -221,6 +209,9 @@ export default function App() {
           <Route path="/lecturer/sessions/:sessionId/matching" element={<AiMatchingRunProgress />} />
           <Route path="/lecturer/sessions/:sessionId/override" element={<DragDropOverrideStudio />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/import" element={<RosterImportWizard />} />
+          <Route path="/admin/constitution" element={<ConstitutionGuardrailEditor />} />
+          <Route path="/admin/audit-logs" element={<AuditLogViewer />} />
           <Route path="*" element={<LandingPage />} />
         </Routes>
       </BrowserRouter>
