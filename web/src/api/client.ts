@@ -1,5 +1,5 @@
-import axios, { AxiosError, AxiosResponse } from 'axios';
-import { ApiErrorResponse } from '../types/api';
+import axios, { AxiosError, type AxiosResponse } from 'axios';
+import type { ApiErrorResponse } from '../types/api';
 
 /**
  * Helper to generate a valid Base64 Bearer Token for Local Dev Mode (without Firebase).
@@ -7,7 +7,7 @@ import { ApiErrorResponse } from '../types/api';
  */
 export function createDevMockToken(userId: string, role: 'STUDENT' | 'LECTURER' | 'ADMIN'): string {
   const payload = JSON.stringify({ uid: userId, role: role.toLowerCase() });
-  return typeof window !== 'undefined' ? btoa(payload) : Buffer.from(payload).toString('base64');
+  return btoa(payload);
 }
 
 export const apiClient = axios.create({

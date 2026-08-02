@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { apiClient, createDevMockToken } from './api/client';
-import { Sparkles, ShieldCheck, Users, GraduationCap, ArrowRight, UserCheck, AlertTriangle } from 'lucide-react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createDevMockToken } from './api/client';
+import { Sparkles, ShieldCheck, Users, ArrowRight, UserCheck, AlertTriangle } from 'lucide-react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -177,28 +177,6 @@ function LoginPage() {
   );
 }
 
-// Screen 11: Student Dashboard Placeholder
-function StudentDashboard() {
-  const { data: health, isLoading } = useQuery({
-    queryKey: ['healthCheck'],
-    queryFn: () => apiClient.get('/health'),
-  });
-
-  return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Student Dashboard (Screen 11)</h1>
-          <p className="text-xs text-slate-500">Chào mừng sinh viên (ID: {localStorage.getItem('tfa_user_id') || 'stu_01'})</p>
-        </div>
-        <div className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
-          Backend API: {isLoading ? 'Đang kết nối...' : 'CONNECTED (OK)'}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Screen 20: Lecturer Dashboard Placeholder
 function LecturerDashboard() {
   return (
@@ -233,6 +211,11 @@ function AdminDashboard() {
   );
 }
 
+import { StudentDashboard } from './pages/student/StudentDashboard';
+import { TeamDnaWizard } from './pages/student/TeamDnaWizard';
+import { ClassSectionWorkspace } from './pages/student/ClassSectionWorkspace';
+import { AiRecommendations } from './pages/student/AiRecommendations';
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -242,6 +225,9 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/student/dna" element={<TeamDnaWizard />} />
+          <Route path="/student/sections/:sectionId" element={<ClassSectionWorkspace />} />
+          <Route path="/student/sections/:sectionId/recommendations" element={<AiRecommendations />} />
           <Route path="/lecturer/dashboard" element={<LecturerDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="*" element={<LandingPage />} />

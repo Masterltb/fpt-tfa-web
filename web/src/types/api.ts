@@ -120,3 +120,14 @@ export interface ApiErrorResponse {
   detail?: string;
   errors?: Array<{ field: string; message: string; code?: string }>;
 }
+
+export type GroupingSession = GroupingSessionConfig;
+
+export interface Recommendation {
+  targetStudentId: string;
+  targetStudentName: string;
+  matchScore: number;
+  reasons: string[];
+  complementarySkills: string[];
+}
+
