@@ -37,6 +37,9 @@ DATABASE_URL = format_database_url(os.environ.get("DATABASE_URL", "sqlite:///./t
 engine_kwargs = {"future": True}
 if DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+    if ":memory:" in DATABASE_URL:
+        from sqlalchemy.pool import StaticPool
+        engine_kwargs["poolclass"] = StaticPool
 else:
     # Supabase PostgreSQL / PgBouncer connection settings
     engine_kwargs.update({

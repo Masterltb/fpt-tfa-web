@@ -22,6 +22,16 @@ from app.api.routes_admin import router as legacy_admin_router
 from app.api.routes_student_team import router as legacy_student_team_router
 from app.api.routes_lecturer import router as legacy_lecturer_router
 
+from app.infra.database import init_db as init_app_db
+from app.infra.db import init_db as init_legacy_db
+
+# Ensure all database tables (both domain & legacy) exist on startup
+init_app_db()
+try:
+    init_legacy_db()
+except Exception:
+    pass
+
 app = FastAPI(
     title="Team Formation Assistant API",
     description="FPT University AI-Assisted Balanced Team Formation Platform (API v1.0.0)",
