@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Lecturer Portal E2E Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('tfa_role', 'LECTURER');
+      window.localStorage.setItem('tfa_user_id', 'lec_01');
+    });
+  });
+
   test('should view Lecturer Dashboard and navigate to Session Builder Wizard', async ({ page }) => {
     await page.goto('/lecturer/dashboard');
 

@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Admin Portal E2E Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('tfa_role', 'ADMIN');
+      window.localStorage.setItem('tfa_user_id', 'adm_01');
+    });
+  });
+
   test('should view Admin Dashboard and system KPIs', async ({ page }) => {
     await page.goto('/admin/dashboard');
 

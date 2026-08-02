@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createDevMockToken } from './api/client';
@@ -13,52 +12,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Screen 45: Dev Mock Auth Switcher Bar
-function DevMockBar() {
-  const [activeRole, setActiveRole] = useState<'STUDENT' | 'LECTURER' | 'ADMIN'>(
-    (localStorage.getItem('tfa_role') as any) || 'STUDENT'
-  );
 
-  const handleRoleChange = (role: 'STUDENT' | 'LECTURER' | 'ADMIN') => {
-    setActiveRole(role);
-    localStorage.setItem('tfa_role', role);
-    const userId = role === 'STUDENT' ? 'stu_01' : role === 'LECTURER' ? 'lec_01' : 'adm_01';
-    localStorage.setItem('tfa_user_id', userId);
-    localStorage.setItem('tfa_token', createDevMockToken(userId, role));
-    window.location.reload();
-  };
-
-  return (
-    <div className="bg-slate-900 text-slate-200 text-xs py-1.5 px-4 flex items-center justify-between border-b border-slate-800">
-      <div className="flex items-center gap-2">
-        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span className="font-semibold text-slate-400">DEV MOCK AUTH BAR (Screen 45):</span>
-        <span className="text-slate-300 font-mono">Role: <strong className="text-orange-400">{activeRole}</strong></span>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-slate-400">Switch Role:</span>
-        <button
-          onClick={() => handleRoleChange('STUDENT')}
-          className={`px-2 py-0.5 rounded transition ${activeRole === 'STUDENT' ? 'bg-orange-500 text-white font-bold' : 'bg-slate-800 hover:bg-slate-700'}`}
-        >
-          Student
-        </button>
-        <button
-          onClick={() => handleRoleChange('LECTURER')}
-          className={`px-2 py-0.5 rounded transition ${activeRole === 'LECTURER' ? 'bg-orange-500 text-white font-bold' : 'bg-slate-800 hover:bg-slate-700'}`}
-        >
-          Lecturer
-        </button>
-        <button
-          onClick={() => handleRoleChange('ADMIN')}
-          className={`px-2 py-0.5 rounded transition ${activeRole === 'ADMIN' ? 'bg-orange-500 text-white font-bold' : 'bg-slate-800 hover:bg-slate-700'}`}
-        >
-          Admin
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // Screen 01: Landing Page
 function LandingPage() {
@@ -177,6 +131,9 @@ function LoginPage() {
   );
 }
 
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
+
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { TeamDnaWizard } from './pages/student/TeamDnaWizard';
 import { ClassSectionWorkspace } from './pages/student/ClassSectionWorkspace';
@@ -192,29 +149,74 @@ import { RosterImportWizard } from './pages/admin/RosterImportWizard';
 import { ConstitutionGuardrailEditor } from './pages/admin/ConstitutionGuardrailEditor';
 import { AuditLogViewer } from './pages/admin/AuditLogViewer';
 
+// Screen 45: Dev Mock Auth Switcher Bar using AuthContext
+function DevMockBar() {
+  const { role, switchRole } = useAuth();
+
+  return (
+    <div className="bg-slate-900 text-slate-200 text-xs py-1.5 px-4 flex items-center justify-between border-b border-slate-800">
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span className="font-semibold text-slate-400">DEV MOCK AUTH BAR (Screen 45):</span>
+        <span className="text-slate-300 font-mono">Role: <strong className="text-orange-400">{role}</strong></span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-slate-400">Switch Role:</span>
+        <button
+          onClick={() => switchRole('STUDENT')}
+          className={`px-2 py-0.5 rounded transition ${role === 'STUDENT' ? 'bg-orange-500 text-white font-bold' : 'bg-slate-800 hover:bg-slate-700'}`}
+        >
+          Student
+        </button>
+        <button
+          onClick={() => switchRole('LECTURER')}
+          className={`px-2 py-0.5 rounded transition ${role === 'LECTURER' ? 'bg-orange-500 text-white font-bold' : 'bg-slate-800 hover:bg-slate-700'}`}
+        >
+          Lecturer
+        </button>
+        <button
+          onClick={() => switchRole('ADMIN')}
+          className={`px-2 py-0.5 rounded transition ${role === 'ADMIN' ? 'bg-orange-500 text-white font-bold' : 'bg-slate-800 hover:bg-slate-700'}`}
+        >
+          Admin
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <DevMockBar />
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/student/dashboard" element={<StudentDashboard />} />
-          <Route path="/student/dna" element={<TeamDnaWizard />} />
-          <Route path="/student/sections/:sectionId" element={<ClassSectionWorkspace />} />
-          <Route path="/student/sections/:sectionId/recommendations" element={<AiRecommendations />} />
-          <Route path="/lecturer/dashboard" element={<LecturerDashboard />} />
-          <Route path="/lecturer/sessions/new" element={<SessionBuilderWizard />} />
-          <Route path="/lecturer/sessions/:sessionId/matching" element={<AiMatchingRunProgress />} />
-          <Route path="/lecturer/sessions/:sessionId/override" element={<DragDropOverrideStudio />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/import" element={<RosterImportWizard />} />
-          <Route path="/admin/constitution" element={<ConstitutionGuardrailEditor />} />
-          <Route path="/admin/audit-logs" element={<AuditLogViewer />} />
-          <Route path="*" element={<LandingPage />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <DevMockBar />
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+
+            {/* Student Protected Routes */}
+            <Route path="/student/dashboard" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
+            <Route path="/student/dna" element={<ProtectedRoute allowedRoles={['STUDENT']}><TeamDnaWizard /></ProtectedRoute>} />
+            <Route path="/student/sections/:sectionId" element={<ProtectedRoute allowedRoles={['STUDENT']}><ClassSectionWorkspace /></ProtectedRoute>} />
+            <Route path="/student/sections/:sectionId/recommendations" element={<ProtectedRoute allowedRoles={['STUDENT']}><AiRecommendations /></ProtectedRoute>} />
+
+            {/* Lecturer Protected Routes */}
+            <Route path="/lecturer/dashboard" element={<ProtectedRoute allowedRoles={['LECTURER']}><LecturerDashboard /></ProtectedRoute>} />
+            <Route path="/lecturer/sessions/new" element={<ProtectedRoute allowedRoles={['LECTURER']}><SessionBuilderWizard /></ProtectedRoute>} />
+            <Route path="/lecturer/sessions/:sessionId/matching" element={<ProtectedRoute allowedRoles={['LECTURER']}><AiMatchingRunProgress /></ProtectedRoute>} />
+            <Route path="/lecturer/sessions/:sessionId/override" element={<ProtectedRoute allowedRoles={['LECTURER']}><DragDropOverrideStudio /></ProtectedRoute>} />
+
+            {/* Admin Protected Routes */}
+            <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/import" element={<ProtectedRoute allowedRoles={['ADMIN']}><RosterImportWizard /></ProtectedRoute>} />
+            <Route path="/admin/constitution" element={<ProtectedRoute allowedRoles={['ADMIN']}><ConstitutionGuardrailEditor /></ProtectedRoute>} />
+            <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AuditLogViewer /></ProtectedRoute>} />
+
+            <Route path="*" element={<LandingPage />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

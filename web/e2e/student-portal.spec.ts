@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Student Portal E2E Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('tfa_role', 'STUDENT');
+      window.localStorage.setItem('tfa_user_id', 'stu_01');
+    });
+  });
+
   test('should render Landing Page and navigate to Login', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Team Formation Assistant' })).toBeVisible();
