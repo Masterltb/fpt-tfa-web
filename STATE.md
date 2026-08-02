@@ -1,7 +1,7 @@
 # STATE
 
 - **Last updated:** 2026-08-02
-- **Last verified commit:** (Phase 1 Frontend Architecture & API Client Complete)
+- **Last verified commit:** df413c3 (feat(web): implement student portal core screens with 11 mandatory ui states)
 - **Active pack:** tfa
 - **Loop level:** L1
 - **loops_paused:** false
@@ -13,18 +13,26 @@ loops_paused: false
 
 ## Current focus
 
-**Phase 1 Frontend Architecture & Integration Foundation Completed.** Scaffolded React 18 + Vite 5 + TypeScript + Tailwind CSS v4 + TanStack Query v5 + React Router v6 in `web/`.
+**Phase 1 Frontend — Module 1: Student Portal Core (Dashboard & Team DNA Wizard) Completed.**
+Implemented Screens 11, 12, 13, and 14 with full 11 mandatory UI states, RFC 7807 error recovery, and Explainable AI (XAI) rationale display.
 
 ### What is verified
 - **48 tests PASS** (`uv run pytest`) across backend unit, domain, OR-Tools, and integration test suites.
-- **Frontend Typecheck PASS** (`npx tsc --noEmit`) with 0 errors.
-- **Audited UX Master Spec (47 Screens)**: Detailed specification artifact covering all 6 functional groups, 3 roles, 3 grouping modes, weekly check-ins, risk alerts, smart rebalance, major catalog, dev mock auth, and RBAC 403 states.
-- **Agent Skill & Workflow Infrastructure**: Created 4 skill/workflow packages (`ui-ux`, `api-integration`, `harness-governance`, `feature-delivery`) under `.agents/skills/` and `.agent/workflows/`.
-- **API Client Foundation**: Configured Axios client with RFC 7807 error interceptors, envelope unwrapping, dev mock bearer token generator (`createDevMockToken`), and TanStack Query client.
-- **Core App Shell**: Created `web/src/App.tsx` with Dev Mock Auth Bar (Screen 45), Landing Page (Screen 01), Login (Screen 07), and Student/Lecturer/Admin Dashboard routing.
+- **Frontend Typecheck & Production Build PASS** (`npx tsc --noEmit` and `npm run build`) with 0 errors.
+- **SDD Specification**: Documented specification in `specs/001-student-portal/spec.md`.
+- **Student Portal Screens Implemented & Routed**:
+  - `StudentDashboard.tsx` (Screen 11): DNA completeness progress banner, course section cards with session status badges.
+  - `TeamDnaWizard.tsx` (Screen 12): 4-step wizard (Skills, Preferred Roles, Availability Matrix, Target Grade/Commitment) with Live DNA Completeness Radar Gauge.
+  - `ClassSectionWorkspace.tsx` (Screen 13): Session configuration per `docs/constitution.md`, grouping countdown deadline, mode badge, and My Team tab.
+  - `AiRecommendations.tsx` (Screen 14): Recommended teammate cards with Match Score % and explainable AI (XAI) rationale box per `docs/constitution.md`.
+- **Git Continuous Delivery**: Changes staged, committed with conventional commit format, and pushed to remote `main`.
 
 ## Next steps
 
-1. Build out Student Portal screens (Team DNA Wizard, Section Workspace, AI Recommendations, Team Detail Workspace).
-2. Build out Lecturer Portal screens (Session Builder Wizard, AI Matching Run Progress, Drag-Drop Override Studio).
-3. End-to-end integration verification with FastAPI Backend API.
+1. **Module 2: Lecturer Portal Core** (Screens 20, 21, 23, 24):
+   - Implement `LecturerDashboard.tsx` (Screen 20).
+   - Implement `SessionBuilderWizard.tsx` (Screen 21) — 3 grouping modes configuration.
+   - Implement `AiMatchingRunProgress.tsx` (Screen 23) — live solver logs and CP-SAT convergence progress.
+   - Implement `DragDropOverrideStudio.tsx` (Screen 24) — Human-in-the-Loop drag-drop team adjustment and override per `docs/constitution.md`.
+2. **Module 3: Admin Portal & System Analytics** (Screens 29, 30, 31, 36).
+3. **End-to-End Playwright Verification** across 3 roles and 3 grouping modes.
