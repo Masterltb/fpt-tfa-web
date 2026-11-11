@@ -2,7 +2,7 @@ name: FPT TFA CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, chore/qa-audit-hardening ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -127,7 +127,7 @@ jobs:
   docker-build-push:
     name: Build & Push Docker Image (GHCR)
     needs: [backend-ci, frontend-ci, playwright-e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -192,7 +192,7 @@ jobs:
   deploy-github-pages:
     name: Deploy Live Web App to GitHub Pages
     needs: [frontend-ci, playwright-e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: read
