@@ -12,7 +12,7 @@ test.describe('Admin Portal E2E Flow', () => {
     await page.goto('/admin/dashboard');
 
     await expect(page.locator('text=/Bảng Điều Khiển Quản Trị Toàn Trường/')).toBeVisible();
-    await expect(page.locator('text=Fall 2026')).toBeVisible();
+    await expect(page.getByRole('main').getByText('Fall 2026', { exact: true })).toBeVisible();
     await expect(page.locator('text=5 Campuses')).toBeVisible();
     await expect(page.locator('text=/4,850|4\\.850/')).toBeVisible();
 
