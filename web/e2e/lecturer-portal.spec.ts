@@ -22,14 +22,14 @@ test.describe('Lecturer Portal E2E Flow', () => {
     // Navigate to Session Builder Wizard
     await page.click('text=Tạo Phiên Ghép Nhóm Mới');
     await expect(page).toHaveURL(/.*lecturer\/sessions\/new/);
-    await expect(page.locator('text=Cấu Hình Hiến Pháp & Thuật Toán CP-SAT')).toBeVisible();
+    await expect(page.locator('text=Cấu Hình Quy Định & Thuật Toán CP-SAT')).toBeVisible();
 
     // Check step 1 mode selection
     await expect(page.locator('text=⭐ HYBRID')).toBeVisible();
 
     // Proceed to Step 2
     await page.click('text=Bước tiếp theo');
-    await expect(page.locator('text=Quy Mô Nhóm theo Hiến Pháp')).toBeVisible();
+    await expect(page.locator('text=Quy Mô Nhóm theo Quy Định')).toBeVisible();
 
     // Proceed to Step 3
     await page.click('text=Bước tiếp theo');
@@ -58,3 +58,4 @@ test.describe('Lecturer Portal E2E Flow', () => {
     await expect(page.locator('text=Chính Thức Phê Duyệt & Công Bố')).toBeEnabled();
   });
 });
+

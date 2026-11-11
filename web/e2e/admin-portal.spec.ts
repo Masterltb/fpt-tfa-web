@@ -41,7 +41,7 @@ test.describe('Admin Portal E2E Flow', () => {
   test('should view Constitution Guardrail Editor and verify immutable constraints', async ({ page }) => {
     await page.goto('/admin/constitution');
 
-    await expect(page.locator('text=Cấu Hình Luật Hiến Pháp Bất Biến')).toBeVisible();
+    await expect(page.locator('text=Cấu Hình Quy Tắc Ràng Buộc Bắt Buộc')).toBeVisible();
     await expect(page.locator('text=STRICT GOVERNANCE LOCKED')).toBeVisible();
     await expect(page.locator('text=1. Quy Mô Nhóm Chuẩn')).toBeVisible();
     await expect(page.locator('text=2. Ràng Buộc "No Student Left Behind"')).toBeVisible();
@@ -60,3 +60,4 @@ test.describe('Admin Portal E2E Flow', () => {
     await expect(page.locator('text=IMPORT_ROSTER_EXCEL')).toBeVisible();
   });
 });
+

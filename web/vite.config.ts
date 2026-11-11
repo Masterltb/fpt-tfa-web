@@ -5,7 +5,9 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './',
+  // Absolute root paths keep BrowserRouter deep links working in previews.
+  // GitHub Pages builds set VITE_BASE_PATH to the repository subpath.
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

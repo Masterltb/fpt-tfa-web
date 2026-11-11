@@ -215,6 +215,8 @@ jobs:
 
       - name: Build Web Application
         working-directory: web
+        env:
+          VITE_BASE_PATH: /fpt-tfa-web/
         run: |
           npm ci
           npm run build
