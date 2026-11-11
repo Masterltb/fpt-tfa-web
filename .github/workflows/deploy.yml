@@ -9,10 +9,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
-  statuses: write
-  pages: write
-  id-token: write
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -133,6 +129,9 @@ jobs:
     needs: [backend-ci, frontend-ci, playwright-e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout Code Repository
@@ -169,10 +168,10 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ---------------------------------------------------------------------------
-  # Job 4: Deployment Notification & Environment Summary
+  # Build and release summary
   # ---------------------------------------------------------------------------
   deploy-summary:
-    name: Deploy Verification & Summary
+    name: Build and Release Summary
     needs: [docker-build-push]
     runs-on: ubuntu-latest
 
@@ -180,11 +179,11 @@ jobs:
       - name: Output Deployment Status
         run: |
           echo "========================================================="
-          echo "🚀 FPT TFA Production CI/CD Pipeline Completed Successfully!"
+          echo "FPT TFA CI/CD pipeline completed successfully."
           echo "Repository: ${{ github.repository }}"
           echo "Commit SHA: ${{ github.sha }}"
           echo "Docker Image: ghcr.io/${{ github.repository }}:latest"
-          echo "Database DSN: Supabase PostgreSQL (ap-northeast-1)"
+          echo "Database: configured by deployment environment"
           echo "========================================================="
 
   # ---------------------------------------------------------------------------
@@ -195,6 +194,10 @@ jobs:
     needs: [frontend-ci, playwright-e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
